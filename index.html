@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Evaluación — Ping Pong Game · Arduino</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#05080F;--panel:#0B1120;--card:#111828;--border:#1A2A42;
+  --g:#00FF88;--c:#00CFFF;--a:#FFD040;--r:#FF4060;--p:#B06AFF;
+  --w:#E8EEF8;--dim:#4A607A;
+  --mono:'Press Start 2P',monospace;--body:'Nunito',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);color:var(--w);
+  font-family:var(--body);line-height:1.6;
+  /* ── SEGURIDAD: bloquear selección global ── */
+  -webkit-user-select:none;-moz-user-select:none;
+  -ms-user-select:none;user-select:none;
+}
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.07) 3px,rgba(0,0,0,.07) 4px);
+}
+body::after{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(ellipse 70% 50% at 50% 0%,rgba(0,207,255,.06) 0%,transparent 70%),
+    radial-gradient(ellipse 50% 40% at 80% 90%,rgba(0,255,136,.05) 0%,transparent 70%);
+}
+/* ── Marca de agua rotada sobre todo el contenido ── */
+#watermark{
+  position:fixed;inset:0;
+  display:flex;align-items:center;justify-content:center;
+  pointer-events:none;z-index:50;
+  overflow:hidden;
+}
+#watermark::before{
+  content:attr(data-txt);
+  font-family:var(--mono);
+  font-size:clamp(11px,1.4vw,15px);
+  color:rgba(0,207,255,.055);
+  white-space:pre;
+  transform:rotate(-30deg);
+  letter-spacing:6px;
+  line-height:3;
+  width:200%;text-align:center;
+}
+.wrap{position:relative;z-index:1;max-width:860px;margin:0 auto;padding:40px 24px 80px;}
+
+/* ── ALERTA DE TRAMPA ── */
+#alert-overlay{
+  display:none;
+  position:fixed;inset:0;background:rgba(0,0,0,.92);
+  z-index:9999;
+  flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;padding:40px;
+}
+#alert-overlay.show{display:flex;}
+.alert-icon{font-size:64px;margin-bottom:20px;}
+.alert-title{
+  font-family:var(--mono);font-size:clamp(12px,2.5vw,18px);
+  color:var(--r);letter-spacing:2px;margin-bottom:16px;
+  text-shadow:0 0 20px rgba(255,64,96,.6);
+}
+.alert-msg{font-size:14px;color:#8DA4C0;max-width:480px;line-height:1.7;margin-bottom:28px;}
+.alert-btn{
+  background:var(--r);color:#fff;border:none;border-radius:8px;
+  font-family:var(--mono);font-size:10px;letter-spacing:2px;
+  padding:14px 28px;cursor:pointer;
+}
+
+/* ── BANNER DE ESTADO SEGURIDAD ── */
+#sec-bar{
+  position:fixed;top:0;left:0;right:0;
+  background:#0a0f08;
+  border-bottom:1px solid rgba(0,255,136,.15);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:6px 20px;z-index:200;
+  font-family:var(--mono);font-size:8px;
+}
+.sec-item{display:flex;align-items:center;gap:6px;color:var(--dim);}
+.sec-dot{width:7px;height:7px;border-radius:50%;}
+.sec-dot.on{background:var(--g);box-shadow:0 0 6px var(--g);}
+.sec-dot.warn{background:var(--a);box-shadow:0 0 6px var(--a);}
+.sec-dot.off{background:var(--r);box-shadow:0 0 6px var(--r);}
+#tab-warn{
+  background:rgba(255,208,64,.1);border:1px solid var(--a);
+  border-radius:6px;padding:3px 10px;color:var(--a);
+  display:none;font-size:8px;
+}
+#tab-warn.show{display:block;}
+
+/* ── TEMPORIZADOR ── */
+#timer-bar{
+  position:fixed;bottom:0;left:0;right:0;
+  background:var(--panel);border-top:1px solid var(--border);
+  display:none;align-items:center;justify-content:space-between;
+  padding:10px 20px;z-index:200;
+  font-family:var(--mono);font-size:10px;
+}
+#timer-bar.show{display:flex;}
+#timer-display{color:var(--g);letter-spacing:2px;}
+#timer-display.warn{color:var(--a);}
+#timer-display.critical{color:var(--r);animation:pulse-r .5s ease-in-out infinite;}
+@keyframes pulse-r{0%,100%{opacity:1}50%{opacity:.4}}
+.timer-label{color:var(--dim);font-size:8px;}
+
+/* ── Progreso ── */
+#prog-wrap{
+  display:none;margin-bottom:24px;
+}
+#prog-wrap.show{display:block;}
+.prog-bar{height:3px;background:var(--border);border-radius:99px;margin:8px 0 4px;overflow:hidden;}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--c),var(--g));border-radius:99px;transition:width .4s;}
+.prog-meta{display:flex;justify-content:space-between;font-family:var(--mono);font-size:8px;color:var(--dim);}
+
+/* Resto de estilos UI idénticos al original */
+.site-header{text-align:center;margin-bottom:44px;padding-bottom:36px;border-top:32px solid transparent;border-bottom:1px solid var(--border);}
+.arcade-title{font-family:var(--mono);font-size:clamp(14px,3vw,22px);color:var(--g);letter-spacing:2px;line-height:1.5;text-shadow:0 0 20px rgba(0,255,136,.4);margin-bottom:12px;animation:blink-glow 2.5s ease-in-out infinite;}
+@keyframes blink-glow{0%,100%{text-shadow:0 0 16px rgba(0,255,136,.5)}50%{text-shadow:0 0 28px rgba(0,255,136,.8)}}
+.site-header p{font-size:13px;color:var(--dim);}
+.pong-divider{display:flex;align-items:center;justify-content:center;gap:12px;margin:20px 0 0;font-family:var(--mono);font-size:10px;color:var(--border);}
+.pong-divider span{color:var(--a);}
+.datos-card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:28px;margin-bottom:44px;position:relative;overflow:hidden;}
+.datos-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--c),var(--g));}
+.section-label{font-family:var(--mono);font-size:9px;letter-spacing:3px;color:var(--c);margin-bottom:20px;display:block;}
+.fields-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+@media(max-width:540px){.fields-grid{grid-template-columns:1fr}}
+.field label{display:block;font-size:11px;font-family:var(--mono);color:var(--dim);letter-spacing:1px;margin-bottom:6px;}
+.field input{
+  width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;
+  color:var(--w);font-family:var(--body);font-size:14px;padding:10px 14px;outline:none;
+  transition:border-color .2s,box-shadow .2s;
+  /* permitir selección en campos de texto */
+  -webkit-user-select:text;-moz-user-select:text;user-select:text;
+}
+.field input:focus{border-color:var(--c);box-shadow:0 0 0 3px rgba(0,207,255,.12);}
+.btn-start{margin-top:20px;width:100%;background:linear-gradient(135deg,var(--g),var(--c));color:var(--bg);border:none;border-radius:8px;font-family:var(--mono);font-size:10px;letter-spacing:2px;padding:14px;cursor:pointer;transition:opacity .15s;}
+.btn-start:hover{opacity:.88;}
+#quiz-body{display:none;}
+.eval-section{margin-bottom:48px;}
+.context-box{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:26px 28px;margin-bottom:28px;position:relative;overflow:hidden;}
+.context-box::after{content:'';position:absolute;top:0;left:0;bottom:0;width:3px;}
+.ctx-green::after{background:var(--g);}
+.ctx-cyan::after{background:var(--c);}
+.ctx-amber::after{background:var(--a);}
+.ctx-heading{font-family:var(--mono);font-size:10px;letter-spacing:2px;margin-bottom:14px;display:flex;align-items:center;gap:10px;}
+.ctx-heading.g{color:var(--g);}.ctx-heading.c{color:var(--c);}.ctx-heading.a{color:var(--a);}
+.ctx-icon{font-size:18px;}
+.ctx-body{font-size:14px;color:#8DA4C0;line-height:1.75;}
+.ctx-body strong{color:var(--w);font-weight:700;}
+.ctx-body code{font-family:var(--mono);font-size:10px;background:rgba(0,0,0,.4);border:1px solid var(--border);border-radius:4px;padding:2px 7px;color:var(--a);}
+pre.snippet{background:#060A10;border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin:14px 0 0;font-family:var(--mono);font-size:10px;line-height:1.9;color:#79C0FF;overflow-x:auto;}
+pre.snippet .kw{color:#FF7B72;}pre.snippet .fn{color:#D2A8FF;}pre.snippet .num{color:#F0883E;}pre.snippet .cm{color:#3A5268;font-style:italic;}pre.snippet .str{color:#A5D6FF;}pre.snippet .def{color:var(--a);}
+.q-list{display:flex;flex-direction:column;gap:18px;}
+.q-item{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:20px 22px;transition:border-color .2s;}
+.q-item:has(.opt input:checked){border-color:rgba(0,207,255,.3);}
+.q-num-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.q-bubble{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:8px;font-weight:700;flex-shrink:0;}
+.q-bubble.g{background:rgba(0,255,136,.12);color:var(--g);border:1px solid var(--g);}
+.q-bubble.c{background:rgba(0,207,255,.12);color:var(--c);border:1px solid var(--c);}
+.q-bubble.a{background:rgba(255,208,64,.12);color:var(--a);border:1px solid var(--a);}
+.q-text{font-size:14px;font-weight:700;color:var(--w);line-height:1.5;}
+.q-text code{font-family:var(--mono);font-size:9px;background:rgba(0,0,0,.4);border:1px solid var(--border);border-radius:4px;padding:2px 7px;color:var(--a);}
+.opts{display:flex;flex-direction:column;gap:8px;margin-top:14px;}
+.opt{display:flex;align-items:center;gap:12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 14px;cursor:pointer;transition:background .15s,border-color .15s;user-select:none;}
+.opt:hover{background:rgba(0,207,255,.05);border-color:rgba(0,207,255,.3);}
+.opt input[type=radio]{display:none;}
+.opt:has(input:checked){background:rgba(0,207,255,.08);border-color:var(--c);}
+.opt-key{font-family:var(--mono);font-size:9px;color:var(--dim);min-width:18px;}
+.opt:has(input:checked) .opt-key{color:var(--c);}
+.opt-text{font-size:13px;color:#8DA4C0;line-height:1.4;}
+.opt:has(input:checked) .opt-text{color:var(--w);}
+.q-feedback{margin-top:10px;padding:10px 14px;border-radius:8px;font-size:12px;line-height:1.5;display:none;}
+.q-feedback.locked-ok{background:rgba(0,255,136,.08);border:1px solid var(--g);color:var(--g);display:block;}
+.q-feedback.locked-err{background:rgba(255,64,96,.08);border:1px solid var(--r);color:var(--r);display:block;}
+.btn-eval-wrap{text-align:center;margin:32px 0;}
+.btn-eval{background:linear-gradient(135deg,var(--a),#FF8C00);color:#000;border:none;border-radius:10px;font-family:var(--mono);font-size:10px;letter-spacing:2px;padding:16px 40px;cursor:pointer;box-shadow:0 0 20px rgba(255,208,64,.3);transition:opacity .15s;}
+.btn-eval:hover{opacity:.88;}
+#result-panel{display:none;}
+.result-card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:40px;text-align:center;position:relative;overflow:hidden;margin-bottom:32px;}
+.result-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--g),var(--c),var(--a));}
+.result-arcade{font-family:var(--mono);font-size:clamp(10px,2vw,14px);color:var(--a);letter-spacing:2px;margin-bottom:16px;}
+.result-score{font-family:var(--mono);font-size:clamp(36px,8vw,72px);color:var(--g);line-height:1;text-shadow:0 0 30px rgba(0,255,136,.5);}
+.result-sub{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--dim);margin:8px 0 24px;}
+.result-name{font-size:16px;font-weight:700;color:var(--w);margin-bottom:4px;}
+.result-meta{font-size:12px;color:var(--dim);}
+.result-rank{display:inline-block;font-family:var(--mono);font-size:10px;padding:8px 24px;border-radius:99px;margin-top:16px;letter-spacing:2px;}
+.rank-s{background:rgba(0,255,136,.12);color:var(--g);border:1px solid var(--g);}
+.rank-a{background:rgba(0,207,255,.12);color:var(--c);border:1px solid var(--c);}
+.rank-b{background:rgba(255,208,64,.12);color:var(--a);border:1px solid var(--a);}
+.rank-c{background:rgba(255,64,96,.12);color:var(--r);border:1px solid var(--r);}
+.breakdown{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:24px;text-align:left;}
+.breakdown h3{font-family:var(--mono);font-size:9px;color:var(--c);letter-spacing:2px;margin-bottom:16px;}
+.bd-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.bd-row:last-child{border:none;}
+.bd-label{color:var(--dim);max-width:75%;}
+.bd-val{font-family:var(--mono);font-size:10px;}
+.bd-val.ok{color:var(--g);}.bd-val.err{color:var(--r);}
+.result-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+.btn-print{background:var(--card);border:1px solid var(--border);color:var(--w);border-radius:10px;font-family:var(--mono);font-size:9px;letter-spacing:2px;padding:14px 28px;cursor:pointer;transition:border-color .15s,color .15s;}
+.btn-print:hover{border-color:var(--c);color:var(--c);}
+
+/* ── Registro de actividad sospechosa ── */
+#activity-log{display:none;}
+
+/* ── Indicador de intentos ── */
+.infraction-badge{
+  position:fixed;top:42px;right:16px;
+  background:rgba(255,64,96,.12);
+  border:1px solid var(--r);
+  border-radius:99px;padding:4px 12px;
+  font-family:var(--mono);font-size:8px;
+  color:var(--r);z-index:201;
+  display:none;letter-spacing:1px;
+}
+.infraction-badge.show{display:block;}
+
+@media print{
+  body{background:#fff;color:#000;-webkit-user-select:text;user-select:text;}
+  body::before,body::after,#watermark,#sec-bar,#timer-bar,.infraction-badge,
+  .btn-start,.btn-eval,.btn-print,#datos-section,#alert-overlay{display:none!important;}
+  .context-box,pre.snippet,.q-item,.result-card,.breakdown{background:#fff;border:1px solid #ccc;color:#000;page-break-inside:avoid;}
+  .ctx-body,.q-text,.opt-text,.bd-label{color:#333;}
+  pre.snippet{background:#f4f4f4;color:#333;}
+  .q-feedback.locked-ok,.q-feedback.locked-err{display:block!important;}
+  #result-panel,#quiz-body{display:block!important;}
+  .result-score{color:#000;text-shadow:none;}
+  /* Imprimir nombre del alumno en encabezado */
+  .site-header::after{content:attr(data-alumno);display:block;font-size:11px;color:#555;margin-top:6px;}
+}
+</style>
+</head>
+<body>
+
+<!-- Marca de agua dinámica (se personaliza con el nombre al iniciar) -->
+<div id="watermark" data-txt="EVALUACIÓN SEGURA  ·  PING PONG ARDUINO  ·  "></div>
+
+<!-- Barra de estado de seguridad -->
+<div id="sec-bar">
+  <div style="display:flex;gap:16px">
+    <div class="sec-item"><div class="sec-dot on" id="dot-copy"></div><span>COPIA: BLOQUEADA</span></div>
+    <div class="sec-item"><div class="sec-dot on" id="dot-ctx"></div><span>MENÚ: BLOQUEADO</span></div>
+    <div class="sec-item"><div class="sec-dot on" id="dot-tab"></div><span>FOCO: ACTIVO</span></div>
+  </div>
+  <div id="tab-warn">⚠ CAMBIO DE PESTAÑA DETECTADO</div>
+  <div class="sec-item"><div class="sec-dot warn" id="dot-timer"></div><span id="sec-time">TIEMPO: --:--</span></div>
+</div>
+
+<!-- Indicador de infracciones -->
+<div class="infraction-badge" id="infraction-badge">⚠ INFRACCIONES: <span id="inf-count">0</span></div>
+
+<!-- Overlay de advertencia -->
+<div id="alert-overlay">
+  <div class="alert-icon" id="alert-icon">🚨</div>
+  <div class="alert-title" id="alert-title">ACTIVIDAD SOSPECHOSA</div>
+  <div class="alert-msg" id="alert-msg">Se detectó un intento de copiar texto. Esta acción ha sido registrada.</div>
+  <button class="alert-btn" onclick="closeAlert()">ENTENDIDO — CONTINUAR</button>
+</div>
+
+<!-- Temporizador inferior -->
+<div id="timer-bar">
+  <div>
+    <div class="timer-label">TIEMPO RESTANTE</div>
+    <div id="timer-display">20:00</div>
+  </div>
+  <div style="font-family:var(--mono);font-size:8px;color:var(--dim);text-align:right">
+    <div>ALUMNO: <span id="t-name" style="color:var(--w)">—</span></div>
+    <div style="margin-top:4px">GRUPO: <span id="t-group" style="color:var(--w)">—</span></div>
+  </div>
+</div>
+
+<div class="wrap">
+
+<header class="site-header" id="main-header">
+  <div class="arcade-title">🏓 PING PONG GAME</div>
+  <div class="pong-divider">——————<span>EVALUACIÓN</span>——————</div>
+  <p>Tinkercad · Arduino UNO · Fundamentos de Programación</p>
+</header>
+
+<!-- DATOS -->
+<div class="datos-card" id="datos-section">
+  <span class="section-label">// DATOS DEL ALUMNO</span>
+  <div class="fields-grid">
+    <div class="field"><label>NOMBRE</label><input id="fn" type="text" placeholder="Tu nombre completo"></div>
+    <div class="field"><label>GRUPO</label><input id="fg" type="text" placeholder="Ej: 1A-TIC"></div>
+    <div class="field"><label>MATERIA</label><input id="fm" type="text" placeholder="Fundamentos de Programación"></div>
+    <div class="field"><label>FECHA</label><input id="ff" type="date"></div>
+  </div>
+  <button class="btn-start" onclick="startQuiz()">INICIAR EVALUACIÓN &nbsp;▶</button>
+</div>
+
+<!-- QUIZ -->
+<div id="quiz-body">
+  <div id="prog-wrap">
+    <div class="prog-meta"><span id="prog-label" style="color:var(--c)">PROGRESO</span><span id="prog-pct" style="color:var(--g)">0%</span></div>
+    <div class="prog-bar"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
+    <div class="prog-meta"><span id="ans-count" style="color:var(--dim)">0 respondidas</span><span id="q-total" style="color:var(--dim)"></span></div>
+  </div>
+
+  <!-- SECCIÓN 1 -->
+  <div class="eval-section">
+    <div class="context-box ctx-green">
+      <div class="ctx-heading g"><span class="ctx-icon">🔌</span>SECCIÓN 1 — Librerías, pines y variables globales</div>
+      <div class="ctx-body">
+        El código comienza incluyendo dos <strong>librerías</strong>: <code>LiquidCrystal.h</code> para controlar la pantalla LCD de 16×2 caracteres, y <code>Adafruit_NeoPixel.h</code> para manejar los LEDs de color.<br><br>
+        Después se definen los <strong>pines</strong> de cada botón y componente usando <code>#define</code>, que es como ponerle un nombre a un número para no tener que recordarlo. Por ejemplo, <code>#define P1U 6</code> significa que el botón "jugador 1 arriba" está en el pin 6.<br><br>
+        Luego se crean las <strong>variables globales</strong>: arreglos <code>byte</code> que representan las paletas y la pelota como matrices de 16 posiciones, y variables <code>int</code> y <code>bool</code> que guardan la puntuación, la dirección y si el juego está corriendo.
+      </div>
+      <pre class="snippet"><span class="cm">// Incluir librería</span>
+#include &lt;LiquidCrystal.h&gt;
+<span class="fn">LiquidCrystal</span> lcd(<span class="num">12</span>, <span class="num">11</span>, <span class="num">5</span>, <span class="num">4</span>, <span class="num">3</span>, <span class="num">2</span>);
+<span class="def">#define</span> P1U <span class="num">6</span>   <span class="cm">// botón jugador 1 arriba</span>
+<span class="def">#define</span> piezo <span class="num">10</span>
+<span class="kw">int</span> score1 = <span class="num">0</span>, score2 = <span class="num">0</span>;
+<span class="kw">boolean</span> game = <span class="num">0</span>;
+<span class="kw">char</span> direction = <span class="str">'L'</span>;</pre>
+    </div>
+    <div class="q-list" id="qs-s1"></div>
+  </div>
+
+  <!-- SECCIÓN 2 -->
+  <div class="eval-section">
+    <div class="context-box ctx-cyan">
+      <div class="ctx-heading c"><span class="ctx-icon">⚙️</span>SECCIÓN 2 — setup() y el bucle de espera</div>
+      <div class="ctx-body">
+        La función <code>setup()</code> se ejecuta <strong>una sola vez</strong> al encender el Arduino. Aquí se inicializan los LEDs NeoPixel, se configuran los pines de los botones como <strong>entradas</strong> (<code>INPUT</code>) y el zumbador como <strong>salida</strong> (<code>OUTPUT</code>). También inicia la pantalla LCD y muestra el nombre del juego por 1.5 segundos.<br><br>
+        Dentro de <code>loop()</code>, hay un <strong>bucle while</strong> que mantiene el programa esperando hasta que el jugador presione el botón de inicio. Se usa <code>digitalRead(start) == HIGH</code> para detectar cuándo se presiona. Una vez presionado, la variable <code>game</code> cambia a <code>1</code> y el juego comienza.
+      </div>
+      <pre class="snippet"><span class="kw">void</span> <span class="fn">setup</span>() {
+  <span class="fn">pinMode</span>(P1U, INPUT);
+  <span class="fn">pinMode</span>(piezo, OUTPUT);
+  lcd.<span class="fn">begin</span>(<span class="num">16</span>, <span class="num">2</span>);
+  <span class="fn">delay</span>(<span class="num">1500</span>);
+}
+<span class="kw">while</span> (game == <span class="num">0</span>) {
+  <span class="kw">if</span> (<span class="fn">digitalRead</span>(start) == HIGH) {
+    game = <span class="num">1</span>;
+  }
+}</pre>
+    </div>
+    <div class="q-list" id="qs-s2"></div>
+  </div>
+
+  <!-- SECCIÓN 3 -->
+  <div class="eval-section">
+    <div class="context-box ctx-amber">
+      <div class="ctx-heading a"><span class="ctx-icon">🎮</span>SECCIÓN 3 — Lógica del juego: paletas, pelota y puntuación</div>
+      <div class="ctx-body">
+        Ya en el juego, el programa lee los botones de cada jugador y llama funciones como <code>paddle1Up()</code> o <code>paddle1Down()</code> que mueven la paleta desplazando los valores en el arreglo.<br><br>
+        La <strong>pelota</strong> avanza frame a frame: si va a la izquierda (<code>direction == 'L'</code>), la variable <code>x</code> decrece; si va a la derecha, aumenta. Cuando llega al extremo (posición <code>x == 3</code> o <code>x == 15</code>), el programa verifica si la pelota coincide con la paleta. Si sí, cambia la dirección y suma un punto. Si no, muestra <strong>"Game over"</strong>, enciende los LEDs y reinicia.<br><br>
+        El <code>bounce</code> controla si la pelota se mueve hacia arriba o hacia abajo para darle efecto diagonal.
+      </div>
+      <pre class="snippet"><span class="kw">if</span> (x == <span class="num">3</span>) {
+  <span class="kw">if</span> (v1 == v2) {
+    direction = <span class="str">'R'</span>;
+    score1 += <span class="num">1</span>;
+    <span class="fn">piezoSound</span>(<span class="num">10</span>);
+  } <span class="kw">else</span> {
+    lcd.<span class="fn">print</span>(<span class="str">"P2 won!"</span>);
+    game = <span class="num">0</span>;
+  }
+}</pre>
+    </div>
+    <div class="q-list" id="qs-s3"></div>
+  </div>
+
+  <div class="btn-eval-wrap">
+    <button class="btn-eval" onclick="evaluar()">VER MI RESULTADO &nbsp;🏆</button>
+  </div>
+</div><!-- /quiz-body -->
+
+<!-- RESULTADO -->
+<div id="result-panel">
+  <div class="result-card">
+    <div class="result-arcade">GAME OVER — RESULTADO FINAL</div>
+    <div class="result-score" id="res-score">0/13</div>
+    <div class="result-sub" id="res-sub">PUNTOS OBTENIDOS</div>
+    <div class="result-name" id="res-name"></div>
+    <div class="result-meta" id="res-meta"></div>
+    <div class="result-rank" id="res-rank"></div>
+    <div id="infr-result" style="margin-top:12px;font-family:var(--mono);font-size:8px;color:var(--dim)"></div>
+  </div>
+  <div class="breakdown">
+    <h3>// DESGLOSE DE RESPUESTAS</h3>
+    <div id="bd-rows"></div>
+  </div>
+  <div class="result-btns">
+    <button class="btn-print" onclick="window.print()">🖨 IMPRIMIR / GUARDAR PDF</button>
+  </div>
+</div>
+
+</div><!-- /wrap -->
+
+<script>
+// ════════════════════════════════════════════════════
+//  BANCO DE PREGUNTAS
+// ════════════════════════════════════════════════════
+const SECCIONES=[
+  {id:'s1',color:'g',preguntas:[
+    {txt:'¿Para qué sirve <code>#include &lt;LiquidCrystal.h&gt;</code> al inicio del código?',
+     opts:['Para incluir una librería que nos permite controlar la pantalla LCD','Para declarar una variable llamada LiquidCrystal','Para encender el LED de la placa Arduino','Para definir el pin del LCD'],
+     correct:0,fb:'✓ #include agrega una librería externa. LiquidCrystal.h nos da funciones para manejar la pantalla LCD fácilmente.'},
+    {txt:'¿Qué significa <code>#define P1U 6</code>?',
+     opts:['Que el pin 6 se llama P1U — es un nombre para el número 6','Que se crea una variable entera llamada P1U con valor 6','Que el pin P1U se configura como entrada','Que el jugador 1 tiene 6 vidas'],
+     correct:0,fb:'✓ #define asigna un nombre a un valor constante. P1U es solo un apodo para el número 6, haciendo el código más legible.'},
+    {txt:'¿Qué tipo de dato es <code>boolean game = 0</code>?',
+     opts:['Un número decimal','Un valor verdadero o falso (true/false)','Un texto o cadena de caracteres','Un arreglo de bytes'],
+     correct:1,fb:'✓ boolean solo puede ser 0 (falso) o 1 (verdadero). Aquí controla si el juego está activo o no.'},
+    {txt:'¿Por qué se usa un arreglo <code>byte paddle1[16]</code> para representar la paleta?',
+     opts:['Porque el LCD tiene 16 columnas y se necesita una posición por columna para saber dónde está la paleta','Para guardar el nombre del jugador 1','Para contar hasta 16','Porque byte es el único tipo de dato de Arduino'],
+     correct:0,fb:'✓ El LCD tiene 16 columnas. El arreglo de 16 posiciones mapea cada columna, indicando si hay paleta (1 ó 16) o espacio vacío (0).'},
+  ]},
+  {id:'s2',color:'c',preguntas:[
+    {txt:'¿Cuántas veces se ejecuta la función <code>setup()</code>?',
+     opts:['Una sola vez al encender el Arduino','Cada vez que se presiona un botón','Infinitamente, igual que loop()','Solo cuando game == 1'],
+     correct:0,fb:'✓ setup() siempre corre una sola vez al inicio. Su propósito es configurar el hardware antes del programa principal.'},
+    {txt:'¿Qué hace <code>pinMode(P1U, INPUT)</code>?',
+     opts:['Le indica al Arduino que el pin P1U recibirá señal (es un botón)','Le indica que enviará señal','Enciende el botón P1U','Define el valor del pin P1U como 0'],
+     correct:0,fb:'✓ INPUT configura el pin para recibir señal. Se usa para botones y sensores. OUTPUT se usaría para enviar señal.'},
+    {txt:'¿Qué hace el <code>while (game == 0)</code> en loop()?',
+     opts:['Mantiene el programa en espera hasta que el jugador presione inicio','Reinicia el juego cuando game vale 0','Pausa el LCD por 0 segundos','Hace que game siempre sea igual a 0'],
+     correct:0,fb:'✓ while repite su contenido MIENTRAS la condición sea verdadera. Aquí "atrapa" el programa en pantalla de espera.'},
+    {txt:'¿Qué ocurre cuando <code>digitalRead(start) == HIGH</code> es verdadero?',
+     opts:['Se detecta que el botón de inicio fue presionado','El Arduino se apaga','La pelota cambia de dirección','El score se reinicia a 0'],
+     correct:0,fb:'✓ digitalRead lee el estado de un pin. HIGH significa voltaje en el pin, indicando que el botón fue presionado.'},
+  ]},
+  {id:'s3',color:'a',preguntas:[
+    {txt:'¿Qué pasa cuando la pelota llega a <code>x == 3</code> y NO coincide con la paleta 1?',
+     opts:['El jugador 2 gana — se muestra "P2 won!" y el juego se reinicia','La pelota rebota automáticamente','Se suma un punto al jugador 1','La pelota se detiene en esa posición'],
+     correct:0,fb:'✓ Si la pelota llega al extremo izquierdo sin ser golpeada, el jugador 1 falló. Por eso gana el jugador 2.'},
+    {txt:'¿Qué hace <code>score1 += 1</code>?',
+     opts:['Suma 1 punto a la puntuación del jugador 1','Reinicia el marcador del jugador 1','Resta 1 punto al jugador 1','Establece score1 igual a 1'],
+     correct:0,fb:'✓ += es el operador de suma y asignación. score1 += 1 equivale a score1 = score1 + 1.'},
+    {txt:"¿Para qué sirve la variable <code>direction</code> con valores <code>'L'</code> y <code>'R'</code>?",
+     opts:["Para saber si la pelota se mueve a la izquierda o a la derecha","Para guardar el nombre de los jugadores","Para indicar el rebote vertical","Para contar cuántas veces ha rebotado la pelota"],
+     correct:0,fb:"✓ direction es un char. 'L' = Left (izquierda) y 'R' = Right (derecha). El programa la revisa cada ciclo para mover la pelota."},
+    {txt:'¿Cuál es el propósito de <code>piezoSound(10)</code> cuando la pelota rebota?',
+     opts:['Emitir un sonido corto de 10 ms como retroalimentación auditiva al jugador','Mover el servo 10 grados','Pausar el juego 10 segundos','Aumentar la velocidad de la pelota'],
+     correct:0,fb:'✓ piezoSound(d) activa el buzzer durante d milisegundos. Un sonido de 10ms da feedback sonoro instantáneo al rebotar.'},
+    {txt:'¿Qué hace el código cuando termina el juego (<code>game = 0</code>)?',
+     opts:['Reinicia las puntuaciones a 0 y vuelve a la pantalla de espera para una nueva partida','Apaga el Arduino definitivamente','Guarda la puntuación en memoria permanente','Cambia el color de los LEDs para siempre'],
+     correct:0,fb:'✓ Al asignar game = 0, el while de espera vuelve a activarse, reinicia los marcadores y espera que alguien presione Start.'},
+  ]},
+];
+
+// ════════════════════════════════════════════════════
+//  SEGURIDAD — VARIABLES
+// ════════════════════════════════════════════════════
+let infractions = 0;
+let tabSwitches = 0;
+let timerInterval = null;
+let secondsLeft = 20 * 60; // 20 minutos
+let quizActive = false;
+let alertOpen = false;
+const MAX_INFRACTIONS = 5;
+
+function registerInfraction(type) {
+  infractions++;
+  document.getElementById('inf-count').textContent = infractions;
+  document.getElementById('infraction-badge').classList.add('show');
+  if (infractions >= MAX_INFRACTIONS) {
+    showAlert('🔒','LÍMITE DE INFRACCIONES','Has superado el número máximo de intentos de trampa registrados. La actividad fue reportada.');
+  }
+}
+
+function showAlert(icon, title, msg) {
+  if (alertOpen) return;
+  alertOpen = true;
+  document.getElementById('alert-icon').textContent = icon;
+  document.getElementById('alert-title').textContent = title;
+  document.getElementById('alert-msg').textContent = msg;
+  document.getElementById('alert-overlay').classList.add('show');
+}
+
+function closeAlert() {
+  document.getElementById('alert-overlay').classList.remove('show');
+  alertOpen = false;
+}
+
+// ── Bloquear copia (Ctrl+C / Cmd+C) ──
+document.addEventListener('copy', e => {
+  e.preventDefault();
+  registerInfraction('copy');
+  showAlert('⛔','COPIA BLOQUEADA','El texto de esta evaluación no se puede copiar. Esta acción ha sido registrada.');
+  return false;
+});
+
+// ── Bloquear cortar ──
+document.addEventListener('cut', e => {
+  e.preventDefault();
+  registerInfraction('cut');
+  return false;
+});
+
+// ── Bloquear menú contextual (clic derecho) ──
+document.addEventListener('contextmenu', e => {
+  if (!e.target.closest('input')) {
+    e.preventDefault();
+    registerInfraction('contextmenu');
+    showAlert('🖱️','MENÚ BLOQUEADO','El menú contextual está deshabilitado durante la evaluación.');
+    return false;
+  }
+});
+
+// ── Bloquear combinaciones de teclado peligrosas ──
+document.addEventListener('keydown', e => {
+  const blocked = [
+    e.ctrlKey && e.key === 'a',   // seleccionar todo
+    e.ctrlKey && e.key === 'c',   // copiar
+    e.ctrlKey && e.key === 'u',   // ver fuente
+    e.ctrlKey && e.key === 's',   // guardar
+    e.ctrlKey && e.key === 'p',   // imprimir (solo en quiz activo)
+    e.ctrlKey && e.shiftKey && e.key === 'I', // devtools
+    e.ctrlKey && e.shiftKey && e.key === 'J',
+    e.ctrlKey && e.shiftKey && e.key === 'C',
+    e.key === 'F12',
+  ];
+
+  // Permitir imprimir solo desde el resultado
+  const inResult = document.getElementById('result-panel').style.display !== 'none';
+  if (e.ctrlKey && e.key === 'p' && inResult) return; // permitir
+
+  if (blocked.some(Boolean)) {
+    e.preventDefault();
+    if (quizActive) {
+      registerInfraction('keyboard');
+      showAlert('⌨️','ATAJO BLOQUEADO','El atajo que intentaste usar está deshabilitado durante la evaluación.');
+    }
+    return false;
+  }
+});
+
+// ── Detectar cambio de pestaña / minimizar ──
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && quizActive) {
+    tabSwitches++;
+    document.getElementById('tab-warn').classList.add('show');
+    document.getElementById('dot-tab').className = 'sec-dot off';
+    registerInfraction('tab');
+    setTimeout(()=>{
+      document.getElementById('tab-warn').classList.remove('show');
+      document.getElementById('dot-tab').className = 'sec-dot on';
+    }, 4000);
+  }
+});
+
+// ── Detectar pérdida de foco ──
+window.addEventListener('blur', () => {
+  if (quizActive) {
+    document.getElementById('tab-warn').classList.add('show');
+    registerInfraction('blur');
+    setTimeout(()=> document.getElementById('tab-warn').classList.remove('show'), 3000);
+  }
+});
+
+// ── Detectar DevTools (trick de tamaño) ──
+const devtoolsDetect = ()=>{
+  const threshold = 160;
+  if(window.outerWidth - window.innerWidth > threshold || window.outerHeight - window.innerHeight > threshold){
+    if(quizActive){
+      registerInfraction('devtools');
+      showAlert('🛠️','HERRAMIENTAS DETECTADAS','Se detectaron herramientas de desarrollador. Esta acción ha sido registrada.');
+    }
+  }
+};
+setInterval(devtoolsDetect, 3000);
+
+// ── Bloquear arrastrar texto ──
+document.addEventListener('dragstart', e => { if(!e.target.closest('input')) e.preventDefault(); });
+
+// ════════════════════════════════════════════════════
+//  TEMPORIZADOR
+// ════════════════════════════════════════════════════
+function startTimer() {
+  const display = document.getElementById('timer-display');
+  const secTime = document.getElementById('sec-time');
+  timerInterval = setInterval(() => {
+    secondsLeft--;
+    const m = Math.floor(secondsLeft / 60);
+    const s = secondsLeft % 60;
+    const txt = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    display.textContent = txt;
+    secTime.textContent = `TIEMPO: ${txt}`;
+    if (secondsLeft <= 300 && secondsLeft > 60) {
+      display.className = 'warn';
+      document.getElementById('dot-timer').className = 'sec-dot warn';
+    }
+    if (secondsLeft <= 60) {
+      display.className = 'critical';
+      document.getElementById('dot-timer').className = 'sec-dot off';
+    }
+    if (secondsLeft <= 0) {
+      clearInterval(timerInterval);
+      evaluar(true);
+    }
+  }, 1000);
+}
+
+// ════════════════════════════════════════════════════
+//  PROGRESO EN TIEMPO REAL
+// ════════════════════════════════════════════════════
+function updateProgress() {
+  const total = preguntasData.length;
+  const answered = preguntasData.filter((_,i) =>
+    document.querySelector(`input[name="q${i}"]:checked`)
+  ).length;
+  const pct = Math.round((answered / total) * 100);
+  document.getElementById('prog-fill').style.width = pct + '%';
+  document.getElementById('prog-pct').textContent = pct + '%';
+  document.getElementById('ans-count').textContent = `${answered} respondidas`;
+}
+
+// ════════════════════════════════════════════════════
+//  RENDERIZAR PREGUNTAS
+// ════════════════════════════════════════════════════
+let totalPreguntas = 0;
+let preguntasData = [];
+
+function renderAll() {
+  SECCIONES.forEach(sec => {
+    const container = document.getElementById(`qs-${sec.id}`);
+    sec.preguntas.forEach((q, qi) => {
+      const gi = totalPreguntas;
+      preguntasData.push({sId:sec.id, qIdx:qi, correct:q.correct, fb:q.fb, txt:q.txt});
+      totalPreguntas++;
+      const keys = ['A','B','C','D'];
+      const optsHtml = q.opts.map((o,oi)=>`
+        <label class="opt" onclick="updateProgress()">
+          <input type="radio" name="q${gi}" value="${oi}">
+          <span class="opt-key">${keys[oi]}.</span>
+          <span class="opt-text">${o}</span>
+        </label>`).join('');
+      const div = document.createElement('div');
+      div.className = 'q-item'; div.id = `qi-${gi}`;
+      div.innerHTML = `
+        <div class="q-num-row">
+          <div class="q-bubble ${sec.color}">${gi+1}</div>
+          <div class="q-text">${q.txt}</div>
+        </div>
+        <div class="opts">${optsHtml}</div>
+        <div class="q-feedback" id="fb-${gi}"></div>`;
+      container.appendChild(div);
+    });
+  });
+  document.getElementById('q-total').textContent = `de ${totalPreguntas}`;
+}
+renderAll();
+
+// ════════════════════════════════════════════════════
+//  INICIAR QUIZ
+// ════════════════════════════════════════════════════
+function startQuiz() {
+  const nombre = document.getElementById('fn').value.trim();
+  const grupo  = document.getElementById('fg').value.trim();
+  if (!nombre || !grupo) { alert('Por favor ingresa tu nombre y grupo.'); return; }
+
+  // Personalizar marca de agua con nombre del alumno
+  const wm = document.getElementById('watermark');
+  const wmTxt = `${nombre.toUpperCase()}  ·  EVALUACIÓN SEGURA  ·  PING PONG ARDUINO  ·  ${nombre.toUpperCase()}  ·  `;
+  wm.setAttribute('data-txt', wmTxt.repeat(3));
+
+  // Cabecera para impresión
+  document.getElementById('main-header').setAttribute('data-alumno', `${nombre} · ${grupo}`);
+
+  // Temporizador en barra
+  document.getElementById('t-name').textContent = nombre;
+  document.getElementById('t-group').textContent = grupo;
+
+  document.getElementById('datos-section').style.display = 'none';
+  document.getElementById('quiz-body').style.display = 'block';
+  document.getElementById('timer-bar').classList.add('show');
+  document.getElementById('prog-wrap').classList.add('show');
+
+  quizActive = true;
+  startTimer();
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+// ════════════════════════════════════════════════════
+//  EVALUAR
+// ════════════════════════════════════════════════════
+function evaluar(timeout = false) {
+  clearInterval(timerInterval);
+  quizActive = false;
+  let correctas = 0;
+  const bdRows = document.getElementById('bd-rows');
+  bdRows.innerHTML = '';
+
+  preguntasData.forEach((p, gi) => {
+    const sel = document.querySelector(`input[name="q${gi}"]:checked`);
+    const ans = sel ? parseInt(sel.value) : -1;
+    const isOk = ans === p.correct;
+    if (isOk) correctas++;
+
+    const fbEl = document.getElementById(`fb-${gi}`);
+    if (fbEl) {
+      fbEl.className = `q-feedback ${isOk ? 'locked-ok' : 'locked-err'}`;
+      fbEl.textContent = isOk ? p.fb : `✗ Incorrecto. ${p.fb}`;
+    }
+    document.querySelectorAll(`input[name="q${gi}"]`).forEach(r => r.disabled = true);
+
+    const row = document.createElement('div');
+    row.className = 'bd-row';
+    const qText = p.txt.replace(/<[^>]+>/g,'').substring(0,55) + '…';
+    row.innerHTML = `
+      <span class="bd-label">P${gi+1}: ${qText}</span>
+      <span class="bd-val ${isOk?'ok':'err'}">${isOk?'✓ CORRECTO':'✗ INCORRECTO'}</span>`;
+    bdRows.appendChild(row);
+  });
+
+  const pct = Math.round((correctas / totalPreguntas) * 100);
+  document.getElementById('res-score').textContent = `${correctas}/${totalPreguntas}`;
+  document.getElementById('res-sub').textContent = `${pct}% DE ACIERTOS${timeout?' — TIEMPO AGOTADO':''}`;
+
+  const nombre  = document.getElementById('fn').value;
+  const grupo   = document.getElementById('fg').value;
+  const materia = document.getElementById('fm').value || 'Fundamentos de Programación';
+  const fecha   = document.getElementById('ff').value;
+  document.getElementById('res-name').textContent = nombre;
+  document.getElementById('res-meta').textContent = `${grupo}  ·  ${materia}  ·  ${fecha}`;
+
+  const rankEl = document.getElementById('res-rank');
+  if (pct >= 90)      { rankEl.className='result-rank rank-s'; rankEl.textContent='★ EXCELENTE'; }
+  else if (pct >= 70) { rankEl.className='result-rank rank-a'; rankEl.textContent='▲ MUY BIEN'; }
+  else if (pct >= 50) { rankEl.className='result-rank rank-b'; rankEl.textContent='● SUFICIENTE'; }
+  else                { rankEl.className='result-rank rank-c'; rankEl.textContent='▼ A REPASAR'; }
+
+  if (infractions > 0) {
+    document.getElementById('infr-result').textContent =
+      `⚠ Infracciones registradas: ${infractions} · Cambios de pestaña: ${tabSwitches}`;
+  }
+
+  document.getElementById('result-panel').style.display = 'block';
+  document.getElementById('result-panel').scrollIntoView({behavior:'smooth'});
+}
+
+// Fecha por defecto
+document.getElementById('ff').value = new Date().toISOString().split('T')[0];
+</script>
+
+</body>
+</html>
