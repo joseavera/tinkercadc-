@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Evaluación — Ventilador Inteligente · Arduino</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Outfit:wght@300;400;600;700;800&family=IBM+Plex+Mono:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="iedep-base.css">
+</head>
+<body>
+
+<!-- ── Marca de agua ── -->
+<div id="iedep-wm" data-txt="EVALUACIÓN SEGURA · VENTILADOR INTELIGENTE · "></div>
+
+<!-- ── Insignia de infracciones ── -->
+<div id="infr-badge">⚠ INFRACCIONES: <span id="infr-n">0</span></div>
+
+<!-- ── Barra superior ── -->
+<div id="iedep-topbar">
+  <div class="topbar-left">
+    <div class="sec-pill"><div class="sec-dot ok" id="dot-copy"></div><span>COPIA BLOQUEADA</span></div>
+    <div class="sec-pill"><div class="sec-dot ok" id="dot-ctx"></div><span>MENÚ BLOQUEADO</span></div>
+    <div class="sec-pill"><div class="sec-dot ok" id="dot-tab"></div><span id="tab-status">FOCO ACTIVO</span></div>
+  </div>
+  <div class="topbar-right">
+    <div id="tab-alert">⚠ CAMBIO DE PESTAÑA</div>
+    <div class="sec-pill"><span id="sec-clock">TIEMPO: --:--</span></div>
+    <button id="theme-toggle" onclick="toggleTheme()">
+      <span class="theme-icon" id="theme-icon">🌙</span>
+      <span id="theme-txt">CLARO</span>
+    </button>
+  </div>
+</div>
+
+<!-- ── Overlay de alerta ── -->
+<div id="iedep-alert">
+  <div class="alert-icon" id="alert-icon">🚨</div>
+  <div class="alert-title" id="alert-title">ACTIVIDAD DETECTADA</div>
+  <div class="alert-body"  id="alert-body">Esta acción ha sido registrada.</div>
+  <button class="alert-btn" onclick="closeAlert()">ENTENDIDO — CONTINUAR</button>
+</div>
+
+<!-- ── Temporizador ── -->
+<div id="iedep-timer">
+  <div>
+    <div style="font-family:var(--font-mono);font-size:8px;color:var(--text-muted);margin-bottom:2px">TIEMPO RESTANTE</div>
+    <div id="timer-display">25:00</div>
+  </div>
+  <div class="timer-meta">
+    <div>ALUMNO: <span id="t-name">—</span></div>
+    <div>GRUPO: <span id="t-group">—</span></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     CONTENIDO PRINCIPAL
+══════════════════════════════════════════════ -->
+<div class="iedep-wrap">
+
+  <header class="iedep-header" id="main-header">
+    <div class="iedep-badge">EVALUACIÓN · FUNDAMENTOS DE PROGRAMACIÓN</div>
+    <div class="iedep-title">🌡️ VENTILADOR<br>INTELIGENTE</div>
+    <div class="iedep-subtitle">Arduino · PIR · TMP36 · TIP120 · LCD · Tinkercad</div>
+  </header>
+
+  <!-- ══ DATOS DEL ALUMNO ══ -->
+  <div class="datos-card" id="datos-section">
+    <span class="card-label">// DATOS DEL ALUMNO</span>
+    <div class="fields-grid">
+      <div class="iedep-field"><label>NOMBRE</label><input id="fn" type="text" placeholder="Tu nombre completo"></div>
+      <div class="iedep-field"><label>GRUPO</label><input id="fg" type="text" placeholder="Ej: 2B-TIC"></div>
+      <div class="iedep-field"><label>MATERIA</label><input id="fm" type="text" placeholder="Fundamentos de Programación"></div>
+      <div class="iedep-field"><label>FECHA</label><input id="ff" type="date"></div>
+    </div>
+    <button class="btn-primary" onclick="startQuiz()">INICIAR EVALUACIÓN &nbsp;▶</button>
+  </div>
+
+  <!-- ══ QUIZ ══ -->
+  <div id="quiz-body" style="display:none">
+
+    <!-- Barra de progreso -->
+    <div class="iedep-progress" id="prog-wrap">
+      <div class="prog-row">
+        <span style="color:var(--cyan)">PROGRESO</span>
+        <span class="prog-pct" id="prog-pct">0%</span>
+      </div>
+      <div class="prog-track"><div class="prog-fill" id="prog-fill"></div></div>
+      <div class="prog-sub">
+        <span id="ans-count">0 respondidas</span>
+        <span id="q-total"></span>
+      </div>
+    </div>
+
+    <!-- ─────────────────────────────────────────
+         SECCIÓN 1 — ¿Qué hace el proyecto?
+    ───────────────────────────────────────── -->
+    <div class="eval-section">
+      <div class="ctx-box accent-green">
+        <div class="ctx-heading g"><span class="ctx-icon">🌬️</span>SECCIÓN 1 — ¿Qué hace este proyecto?</div>
+        <div class="ctx-body">
+          Este proyecto simula un <strong>ventilador inteligente</strong> que toma decisiones automáticas. Hace tres cosas al mismo tiempo:<br><br>
+          <strong>1. Detecta si hay alguien en el cuarto</strong> usando el sensor PIR. Si no hay nadie, el ventilador se apaga para ahorrar energía.<br>
+          <strong>2. Mide la temperatura</strong> con el sensor TMP36 y decide a qué <em>velocidad</em> debe girar el motor — más calor = más velocidad.<br>
+          <strong>3. Informa al usuario</strong> mostrando en la pantalla LCD la temperatura actual y el nivel de ventilación, o el mensaje <code>"Sin presencia detectada"</code> si no hay nadie.<br><br>
+          El Arduino es el "cerebro": lee los sensores, calcula la velocidad correcta y manda la señal al motor a través del transistor TIP120.
+        </div>
+        <pre class="iedep-code"><span class="cm">// Resumen del flujo principal</span>
+<span class="kw">if</span> (movimento == HIGH) {
+  <span class="cm">// hay alguien → encender ventilador</span>
+  <span class="fn">analogWrite</span>(motorPin, velocidade);
+} <span class="kw">else</span> {
+  <span class="cm">// nadie → apagar ventilador</span>
+  <span class="fn">analogWrite</span>(motorPin, <span class="num">0</span>);
+}</pre>
+      </div>
+      <div class="q-list" id="qs-s1"></div>
+    </div>
+
+    <!-- ─────────────────────────────────────────
+         SECCIÓN 2 — Los componentes: TMP36, TIP120, Diodo
+    ───────────────────────────────────────── -->
+    <div class="eval-section">
+      <div class="ctx-box accent-cyan">
+        <div class="ctx-heading c"><span class="ctx-icon">🔩</span>SECCIÓN 2 — Los componentes clave</div>
+        <div class="ctx-body">
+          <strong>TMP36 — Sensor de temperatura:</strong> Es un pequeño chip de 3 pines que genera un voltaje proporcional a la temperatura. El Arduino lo lee con <code>analogRead()</code> en el pin A0. La lectura va de 0 a 1023, y el código la convierte a grados Celsius con la fórmula:<br>
+          <code>(lectura × 5.0 / 1024.0 − 0.5) × 100</code><br><br>
+          <strong>TIP120 — Transistor Darlington:</strong> El Arduino no puede dar suficiente corriente para girar un motor directamente. El TIP120 actúa como un <em>interruptor electrónico controlado</em>: el Arduino manda una señal pequeña a su base (pin B), y el transistor deja pasar la corriente grande que necesita el motor entre el colector (C) y el emisor (E).<br><br>
+          <strong>Diodo de protección:</strong> Cuando el motor se apaga, genera una corriente de rebote hacia atrás. El diodo actúa como una <em>válvula de un solo sentido</em>: deja pasar corriente en una dirección y bloquea ese rebote para proteger el TIP120 y el Arduino.
+        </div>
+      </div>
+      <div class="q-list" id="qs-s2"></div>
+    </div>
+
+    <!-- ─────────────────────────────────────────
+         SECCIÓN 3 — El código: setup, loop, if-else
+    ───────────────────────────────────────── -->
+    <div class="eval-section">
+      <div class="ctx-box accent-amber">
+        <div class="ctx-heading a"><span class="ctx-icon">💻</span>SECCIÓN 3 — Estructura del código</div>
+        <div class="ctx-body">
+          El programa tiene la estructura clásica Arduino:<br><br>
+          <strong>setup():</strong> Se ejecuta una sola vez. Configura los pines (<code>INPUT</code> para el PIR, <code>OUTPUT</code> para el motor), inicia la pantalla LCD y abre la comunicación serial.<br><br>
+          <strong>loop():</strong> Se repite indefinidamente. En cada ciclo: lee el PIR, lee el TMP36, calcula la temperatura, decide la velocidad con una cadena de <code>if / else if</code>, escribe en el motor con <code>analogWrite()</code> y actualiza el LCD.<br><br>
+          La función <strong>analogWrite(pin, valor)</strong> es clave: acepta valores de <strong>0 a 255</strong> y genera una señal PWM (modulación por ancho de pulso) que controla cuánta energía llega al motor — 0 es apagado, 255 es máxima velocidad.
+        </div>
+        <pre class="iedep-code"><span class="cm">// Escala de velocidades según temperatura</span>
+<span class="kw">if</span>      (temperatura >= <span class="num">11</span> && temperatura <= <span class="num">15</span>) velocidade = <span class="hi">42</span>,  nivel = <span class="num">1</span>;
+<span class="kw">else if</span> (temperatura >= <span class="num">16</span> && temperatura <= <span class="num">20</span>) velocidade = <span class="hi">85</span>,  nivel = <span class="num">2</span>;
+<span class="kw">else if</span> (temperatura >= <span class="num">21</span> && temperatura <= <span class="num">25</span>) velocidade = <span class="hi">127</span>, nivel = <span class="num">3</span>;
+<span class="kw">else if</span> (temperatura >= <span class="num">26</span> && temperatura <= <span class="num">30</span>) velocidade = <span class="hi">170</span>, nivel = <span class="num">4</span>;
+<span class="kw">else if</span> (temperatura >= <span class="num">31</span> && temperatura <= <span class="num">35</span>) velocidade = <span class="hi">212</span>, nivel = <span class="num">5</span>;
+<span class="kw">else if</span> (temperatura >= <span class="num">36</span> && temperatura <= <span class="num">40</span>) velocidade = <span class="hi">255</span>, nivel = <span class="num">6</span>;</pre>
+      </div>
+      <div class="q-list" id="qs-s3"></div>
+    </div>
+
+    <!-- ─────────────────────────────────────────
+         SECCIÓN 4 — Desafíos de código
+    ───────────────────────────────────────── -->
+    <div class="eval-section">
+      <div class="ctx-box accent-purple">
+        <div class="ctx-heading p"><span class="ctx-icon">🧩</span>SECCIÓN 4 — Desafíos: piensa antes de responder</div>
+        <div class="ctx-body">
+          En esta sección no solo necesitas recordar — necesitas <strong>razonar</strong>. Analiza el código del proyecto y responde las siguientes preguntas. Fíjate bien en los valores, las condiciones y la lógica.
+        </div>
+        <pre class="iedep-code"><span class="cm">// Fragmento clave para analizar:</span>
+<span class="kw">float</span> temperatura = (leituraTemp * <span class="num">5.0</span> / <span class="num">1024.0</span> - <span class="num">0.5</span>) * <span class="num">100</span>;
+<span class="kw">int</span> velocidade = <span class="num">0</span>;
+<span class="kw">if</span> (movimento == HIGH) {
+  <span class="cm">// ...cadena de if/else if...</span>
+  <span class="fn">analogWrite</span>(motorPin, velocidade);
+  lcd.<span class="fn">print</span>(<span class="str">"Temp:"</span>); lcd.<span class="fn">print</span>((int)temperatura);
+  lcd.<span class="fn">print</span>((<span class="kw">char</span>)<span class="num">223</span>); <span class="cm">// símbolo °</span>
+  lcd.<span class="fn">print</span>(<span class="str">"C Vel:"</span>); lcd.<span class="fn">print</span>(nivel);
+} <span class="kw">else</span> {
+  <span class="fn">analogWrite</span>(motorPin, <span class="num">0</span>);
+}</pre>
+      </div>
+      <div class="q-list" id="qs-s4"></div>
+    </div>
+
+    <div class="text-center mt-24 mb-24">
+      <button class="btn-accent" onclick="evaluar()">VER MI RESULTADO &nbsp;🏆</button>
+    </div>
+
+  </div><!-- /quiz-body -->
+
+  <!-- ══ RESULTADO ══ -->
+  <div id="result-panel" style="display:none">
+    <div class="result-hero">
+      <div class="result-label">RESULTADO FINAL — VENTILADOR INTELIGENTE</div>
+      <div class="result-score" id="res-score">0/15</div>
+      <div class="result-pct"  id="res-pct">0% DE ACIERTOS</div>
+      <div class="result-name" id="res-name"></div>
+      <div class="result-meta" id="res-meta"></div>
+      <div class="result-rank" id="res-rank"></div>
+      <div class="result-infr" id="res-infr"></div>
+    </div>
+
+    <div class="breakdown-card">
+      <h3>// DESGLOSE DE RESPUESTAS</h3>
+      <div id="bd-rows"></div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="window.print()">🖨 IMPRIMIR / PDF</button>
+    </div>
+  </div>
+
+</div><!-- /wrap -->
+
+<!-- ══════════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════════ -->
+<script>
+/* ════════════════════════════════════════════
+   BANCO DE PREGUNTAS
+════════════════════════════════════════════ */
+const SECCIONES = [
+  { id:'s1', col:'g', preguntas:[
+    { txt:'¿Qué hace el ventilador cuando el sensor PIR <strong>no detecta</strong> a nadie en el cuarto?',
+      opts:['Gira a la velocidad más baja (nivel 1)','Se apaga completamente — analogWrite recibe 0','Sigue girando a la velocidad anterior','Muestra un error en el LCD'],
+      correct:1, fb:'✓ Cuando no hay presencia, el else ejecuta analogWrite(motorPin, 0) — valor 0 significa que no llega señal PWM al motor: se apaga.' },
+    { txt:'¿Para qué sirve la línea <code>lcd.begin(16, 2)</code> en setup()?',
+      opts:['Para limpiar la pantalla LCD','Para indicarle al Arduino que la pantalla tiene 16 columnas y 2 filas','Para encender el retroiluminado del LCD','Para establecer la velocidad de comunicación'],
+      correct:1, fb:'✓ lcd.begin(columnas, filas) inicializa la pantalla con sus dimensiones reales. El LCD del proyecto tiene 16 caracteres por fila y 2 filas.' },
+    { txt:'¿Qué muestra la segunda fila del LCD cuando SÍ hay presencia y la temperatura es 28°C?',
+      opts:['Temp:28°C Vel:3','Temp:28°C Vel:4','Ventilación. Apagada.','Presencia Detec.'],
+      correct:1, fb:'✓ 28°C cae en el rango 26–30°C → nivel = 4. La segunda fila muestra Temp:28°C Vel:4. La fila 0 muestra "Presencia Detec.".' },
+    { txt:'¿Por qué el código usa <code>delay(1000)</code> al final del loop?',
+      opts:['Para que el LCD no se borre solo','Para que el programa espere 1 segundo entre cada lectura del sensor y evitar cambios demasiado rápidos','Para apagar el motor durante 1 segundo','Para que el PIR tenga tiempo de calentarse'],
+      correct:1, fb:'✓ Sin delay el loop se ejecutaría miles de veces por segundo, causando parpadeos en el LCD y lecturas inestables. 1 segundo es un intervalo cómodo.' },
+  ]},
+  { id:'s2', col:'c', preguntas:[
+    { txt:'¿Por qué el Arduino NO puede controlar el motor directamente sin el TIP120?',
+      opts:['Porque el motor es de corriente alterna y el Arduino es de corriente continua','Porque el Arduino solo puede dar hasta ~40 mA por pin, y el motor necesita más corriente de la que el Arduino puede suministrar','Porque el TMP36 y el motor no pueden compartir pines','Porque el motor necesita 12 V y el Arduino trabaja con 5 V solamente'],
+      correct:1, fb:'✓ Cada pin del Arduino puede dar máximo ~40 mA. Un motor pequeño puede necesitar 200–500 mA. El TIP120 amplifica la señal: el Arduino controla su base con poco corriente, y el TIP120 deja pasar la corriente grande al motor.' },
+    { txt:'¿Cuál es la función del diodo de protección conectado en paralelo al motor?',
+      opts:['Convertir la señal PWM en voltaje constante para el motor','Aumentar la velocidad máxima del motor','Bloquear el pico de voltaje inverso que genera el motor al apagarse, protegiendo al TIP120','Indicar visualmente cuándo el motor está encendido'],
+      correct:2, fb:'✓ Los motores son cargas inductivas: al apagarse generan un pulso de voltaje en sentido contrario (back-EMF). El diodo "flyback" conduce ese pulso de forma segura a tierra, protegiendo el TIP120 y el Arduino.' },
+    { txt:'¿Qué pin del TMP36 se conecta al pin analógico A0 del Arduino?',
+      opts:['VCC (alimentación)','GND (tierra)','El pin de señal del medio (salida de voltaje analógico)','Cualquiera de los tres pines — no importa el orden'],
+      correct:2, fb:'✓ El TMP36 tiene 3 pines: VCC a 5V, GND a tierra, y la salida de señal al centro que se conecta a A0. Ese voltaje central varía entre ~0.1V y ~1.75V según la temperatura.' },
+    { txt:'¿Qué significa que <code>analogRead()</code> devuelve un valor de 0 a 1023?',
+      opts:['El Arduino mide el tiempo en milisegundos que tarda en leer el sensor','El Arduino convierte el voltaje analógico (0–5V) en un número digital de 10 bits — 1024 divisiones posibles','Es el número de muestras que toma el Arduino por segundo','Es el rango de temperatura que puede medir el TMP36'],
+      correct:1, fb:'✓ El ADC (convertidor analógico-digital) del Arduino tiene resolución de 10 bits: 2¹⁰ = 1024 valores. Voltaje 0V = 0, voltaje 5V = 1023. La fórmula del código convierte ese número a grados Celsius.' },
+  ]},
+  { id:'s3', col:'a', preguntas:[
+    { txt:'¿Cuántas veces se ejecuta la función <code>setup()</code>?',
+      opts:['Cada vez que se detecta movimiento','Infinitas veces, igual que loop()','Una sola vez al encender o reiniciar el Arduino','Solo cuando la temperatura supera los 40°C'],
+      correct:2, fb:'✓ setup() es la función de inicialización — corre UNA sola vez al inicio. Configura pines, librerías y comunicación serial. Después el control pasa a loop() para siempre.' },
+    { txt:'¿Qué hace <code>pinMode(pirPin, INPUT)</code> en setup()?',
+      opts:['Enciende el sensor PIR','Configura el pin del PIR para recibir señal (leer el estado del sensor)','Configura el pin del PIR para enviar señal','Define la velocidad de lectura del PIR'],
+      correct:1, fb:'✓ INPUT = el pin recibe señal del exterior. Así el Arduino puede leer si el PIR detectó movimiento (HIGH) o no (LOW). Si se configurara como OUTPUT, el Arduino intentaría enviar, no recibir.' },
+    { txt:'¿Qué devuelve <code>digitalRead(pirPin)</code> cuando el sensor PIR NO detecta movimiento?',
+      opts:['255','HIGH (1)','LOW (0)','−1'],
+      correct:2, fb:'✓ digitalRead solo devuelve dos valores: HIGH (1, hay voltaje) o LOW (0, no hay voltaje). Sin movimiento el PIR mantiene su salida en LOW.' },
+    { txt:'¿Para qué sirve <code>Serial.begin(9600)</code>?',
+      opts:['Para que el LCD muestre texto a 9600 fps','Para iniciar la comunicación serial entre el Arduino y la computadora a 9600 baudios, permitiendo usar el Monitor Serie','Para establecer la temperatura máxima del sensor','Para definir cuántos ciclos por segundo ejecuta el loop'],
+      correct:1, fb:'✓ Serial.begin abre el canal USB para comunicación con la computadora. 9600 es la velocidad en baudios. Con Serial.println() puedes ver los valores de temperatura en el Monitor Serie durante el desarrollo.' },
+  ]},
+  { id:'s4', col:'p', preguntas:[
+    { txt:'La temperatura medida es <strong>23°C</strong> y el PIR detecta presencia. ¿Qué valor exacto recibe <code>analogWrite(motorPin, ?)</code>?',
+      opts:['85','127','170','42'],
+      correct:1, fb:'✓ 23°C cae en el rango 21–25°C → velocidade = 127. analogWrite(motorPin, 127) es aproximadamente el 50% de la potencia máxima del motor.' },
+    { txt:'¿Qué pasa si la temperatura es <strong>8°C</strong> — un valor que NO está en ningún rango del if/else if?',
+      opts:['El motor se apaga porque ninguna condición es verdadera','El código usa el último else if: temperatura < 11 → velocidade = 42, nivel = 1','El Arduino entra en error y se reinicia','El LCD muestra "Error de temperatura"'],
+      correct:1, fb:'✓ El código tiene el caso borde: else if (temperatura < 11) velocidade = 42, nivel = 1. Siempre habrá una velocidad mínima aunque haga mucho frío.' },
+    { txt:'¿Por qué la fórmula de temperatura tiene el <strong>−0.5</strong>?\n<code>(leituraTemp * 5.0 / 1024.0 − 0.5) * 100</code>',
+      opts:['Para compensar el error del Arduino al leer voltajes','Porque el TMP36 produce un voltaje de 0.5V cuando está a 0°C — hay que restar ese voltaje de offset antes de convertir a grados','Para evitar que el resultado sea negativo','Es un error en el código — debería ser + 0.5'],
+      correct:1, fb:'✓ El TMP36 tiene un offset de 500 mV (0.5V) a 0°C. La hoja de datos dice: temperatura = (voltaje − 0.5V) × 100. Restar 0.5 antes de ×100 convierte el voltaje bruto en temperatura real.' },
+    { txt:'Si cambias <code>analogWrite(motorPin, velocidade)</code> por <code>digitalWrite(motorPin, HIGH)</code>, ¿qué pasaría?',
+      opts:['El motor giraría a velocidad variable según la temperatura, igual que antes','El motor siempre giraría a máxima velocidad sin importar la temperatura — se perdería el control PWM','El motor se apagaría completamente','El Arduino se reiniciaría por exceso de corriente'],
+      correct:1, fb:'✓ digitalWrite solo tiene dos estados: HIGH (encendido total) o LOW (apagado). Para controlar velocidad se necesita PWM con analogWrite, que varía el ciclo de trabajo entre 0 y 255. Con digitalWrite pierde la gradación.' },
+  ]},
+];
+
+/* ════════════════════════════════════════════
+   SEGURIDAD
+════════════════════════════════════════════ */
+let infractions = 0, tabSwitches = 0, quizActive = false, alertOpen = false;
+
+function infract(type){
+  infractions++;
+  document.getElementById('infr-n').textContent = infractions;
+  document.getElementById('infr-badge').classList.add('show');
+}
+function showAlert(icon, title, body){
+  if(alertOpen) return; alertOpen = true;
+  document.getElementById('alert-icon').textContent = icon;
+  document.getElementById('alert-title').textContent = title;
+  document.getElementById('alert-body').textContent = body;
+  document.getElementById('iedep-alert').classList.add('show');
+}
+function closeAlert(){ document.getElementById('iedep-alert').classList.remove('show'); alertOpen = false; }
+
+document.addEventListener('copy', e=>{ e.preventDefault(); infract('copy'); showAlert('⛔','COPIA BLOQUEADA','El texto no se puede copiar. Acción registrada.'); });
+document.addEventListener('cut',  e=>{ e.preventDefault(); infract('cut'); });
+document.addEventListener('contextmenu', e=>{ if(!e.target.closest('input')){ e.preventDefault(); infract('ctx'); showAlert('🖱️','MENÚ BLOQUEADO','El menú contextual está desactivado durante la evaluación.'); }});
+document.addEventListener('dragstart', e=>{ if(!e.target.closest('input')) e.preventDefault(); });
+document.addEventListener('keydown', e=>{
+  const blocked = [
+    e.ctrlKey&&e.key==='a', e.ctrlKey&&e.key==='c',
+    e.ctrlKey&&e.key==='u', e.ctrlKey&&e.key==='s',
+    e.ctrlKey&&e.shiftKey&&(e.key==='I'||e.key==='J'||e.key==='C'),
+    e.key==='F12',
+  ];
+  const inResult = document.getElementById('result-panel').style.display !== 'none';
+  if(e.ctrlKey&&e.key==='p'&&inResult) return;
+  if(blocked.some(Boolean)){ e.preventDefault(); if(quizActive){ infract('key'); showAlert('⌨️','ATAJO BLOQUEADO','Este atajo no está permitido durante la evaluación.'); }}
+});
+document.addEventListener('visibilitychange', ()=>{
+  if(document.hidden&&quizActive){
+    tabSwitches++; infract('tab');
+    const ta = document.getElementById('tab-alert');
+    const dt = document.getElementById('dot-tab');
+    ta.classList.add('show'); dt.className='sec-dot err';
+    document.getElementById('tab-status').textContent='CAMBIO DETECTADO';
+    setTimeout(()=>{ ta.classList.remove('show'); dt.className='sec-dot ok'; document.getElementById('tab-status').textContent='FOCO ACTIVO'; }, 4000);
+  }
+});
+window.addEventListener('blur',()=>{ if(quizActive){ infract('blur'); document.getElementById('tab-alert').classList.add('show'); setTimeout(()=>document.getElementById('tab-alert').classList.remove('show'),3000); }});
+setInterval(()=>{ if(window.outerWidth-window.innerWidth>160||window.outerHeight-window.innerHeight>160){ if(quizActive){ infract('devtools'); showAlert('🛠️','DEVTOOLS DETECTADOS','Se detectaron herramientas de desarrollador. Acción registrada.'); }}},3000);
+
+/* ════════════════════════════════════════════
+   TEMPORIZADOR (25 min)
+════════════════════════════════════════════ */
+let secondsLeft = 25*60, timerInterval = null;
+function startTimer(){
+  const disp = document.getElementById('timer-display');
+  const clk  = document.getElementById('sec-clock');
+  timerInterval = setInterval(()=>{
+    secondsLeft--;
+    const m=Math.floor(secondsLeft/60), s=secondsLeft%60;
+    const txt=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    disp.textContent=txt; clk.textContent=`TIEMPO: ${txt}`;
+    if(secondsLeft<=300&&secondsLeft>60) disp.className='warn';
+    if(secondsLeft<=60)  disp.className='critical';
+    if(secondsLeft<=0){ clearInterval(timerInterval); evaluar(true); }
+  },1000);
+}
+
+/* ════════════════════════════════════════════
+   TEMA CLARO / OSCURO
+════════════════════════════════════════════ */
+function toggleTheme(){
+  const html = document.documentElement;
+  const isDark = html.getAttribute('data-theme') === 'dark';
+  html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+  document.getElementById('theme-icon').textContent = isDark ? '🌙' : '☀️';
+  document.getElementById('theme-txt').textContent  = isDark ? 'OSCURO' : 'CLARO';
+  localStorage.setItem('iedep-theme', isDark ? 'light' : 'dark');
+}
+// Restaurar tema guardado
+(function(){
+  const saved = localStorage.getItem('iedep-theme');
+  if(saved){ document.documentElement.setAttribute('data-theme',saved);
+    document.getElementById('theme-icon').textContent = saved==='light'?'🌙':'☀️';
+    document.getElementById('theme-txt').textContent  = saved==='light'?'OSCURO':'CLARO'; }
+})();
+
+/* ════════════════════════════════════════════
+   RENDERIZAR PREGUNTAS
+════════════════════════════════════════════ */
+let totalQs=0, pregData=[];
+function renderAll(){
+  SECCIONES.forEach(sec=>{
+    const cont=document.getElementById(`qs-${sec.id}`);
+    sec.preguntas.forEach((q,qi)=>{
+      const gi=totalQs;
+      pregData.push({correct:q.correct, fb:q.fb, txt:q.txt, col:sec.col});
+      totalQs++;
+      const keys=['A','B','C','D'];
+      const optsHtml=q.opts.map((o,oi)=>`
+        <label class="opt-label" onclick="updateProg()">
+          <input class="opt-radio" type="radio" name="q${gi}" value="${oi}">
+          <span class="opt-key">${keys[oi]}.</span>
+          <span class="opt-text">${o}</span>
+        </label>`).join('');
+      const div=document.createElement('div');
+      div.className='q-item'; div.id=`qi-${gi}`;
+      div.innerHTML=`
+        <div class="q-meta-row">
+          <div class="q-num ${sec.col}">${gi+1}</div>
+          <div class="q-text">${q.txt}</div>
+        </div>
+        <div class="opts-list">${optsHtml}</div>
+        <div class="q-feedback" id="fb-${gi}"></div>`;
+      cont.appendChild(div);
+    });
+  });
+  document.getElementById('q-total').textContent=`de ${totalQs}`;
+}
+renderAll();
+
+function updateProg(){
+  const answered=pregData.filter((_,i)=>document.querySelector(`input[name="q${i}"]:checked`)).length;
+  const pct=Math.round(answered/totalQs*100);
+  document.getElementById('prog-fill').style.width=pct+'%';
+  document.getElementById('prog-pct').textContent=pct+'%';
+  document.getElementById('ans-count').textContent=`${answered} respondidas`;
+}
+
+/* ════════════════════════════════════════════
+   INICIAR QUIZ
+════════════════════════════════════════════ */
+function startQuiz(){
+  const nombre=document.getElementById('fn').value.trim();
+  const grupo =document.getElementById('fg').value.trim();
+  if(!nombre||!grupo){ alert('Por favor ingresa tu nombre y grupo.'); return; }
+
+  const wm=document.getElementById('iedep-wm');
+  wm.setAttribute('data-txt',`${nombre.toUpperCase()} · EVALUACIÓN · VENTILADOR INTELIGENTE · ${nombre.toUpperCase()} · `.repeat(3));
+  document.getElementById('main-header').setAttribute('data-alumno',`${nombre} · ${grupo}`);
+  document.getElementById('t-name').textContent=nombre;
+  document.getElementById('t-group').textContent=grupo;
+
+  document.getElementById('datos-section').style.display='none';
+  document.getElementById('quiz-body').style.display='block';
+  document.getElementById('iedep-timer').classList.add('show');
+  document.getElementById('prog-wrap').classList.add('show');
+  quizActive=true;
+  startTimer();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+/* ════════════════════════════════════════════
+   EVALUAR
+════════════════════════════════════════════ */
+function evaluar(timeout=false){
+  clearInterval(timerInterval); quizActive=false;
+  let correctas=0;
+  const bdRows=document.getElementById('bd-rows');
+  bdRows.innerHTML='';
+
+  pregData.forEach((p,gi)=>{
+    const sel=document.querySelector(`input[name="q${gi}"]:checked`);
+    const ans=sel?parseInt(sel.value):-1;
+    const isOk=ans===p.correct;
+    if(isOk) correctas++;
+
+    // Feedback
+    const fb=document.getElementById(`fb-${gi}`);
+    if(fb){ fb.className=`q-feedback ${isOk?'ok':'err'}`; fb.textContent=isOk?p.fb:`✗ Incorrecto. ${p.fb}`; }
+
+    // Bloquear opciones + marcar
+    document.querySelectorAll(`input[name="q${gi}"]`).forEach((r,ri)=>{
+      r.disabled=true;
+      const lbl=r.closest('.opt-label');
+      lbl.classList.add('locked');
+      if(ri===p.correct)  lbl.classList.add('result-correct');
+      else if(ri===ans)   lbl.classList.add('result-wrong');
+    });
+
+    // Desglose
+    const row=document.createElement('div');
+    row.className='bd-row';
+    const qt=p.txt.replace(/<[^>]+>/g,'').substring(0,58)+'…';
+    row.innerHTML=`<span class="bd-q">P${gi+1}: ${qt}</span><span class="bd-pts ${isOk?'ok':'err'}">${isOk?'✓ CORRECTO':'✗ INCORRECTO'}</span>`;
+    bdRows.appendChild(row);
+  });
+
+  const pct=Math.round(correctas/totalQs*100);
+  document.getElementById('res-score').textContent=`${correctas}/${totalQs}`;
+  document.getElementById('res-pct').textContent=`${pct}% DE ACIERTOS${timeout?' — TIEMPO AGOTADO':''}`;
+
+  const nombre =document.getElementById('fn').value;
+  const grupo  =document.getElementById('fg').value;
+  const materia=document.getElementById('fm').value||'Fundamentos de Programación';
+  const fecha  =document.getElementById('ff').value;
+  document.getElementById('res-name').textContent=nombre;
+  document.getElementById('res-meta').textContent=`${grupo} · ${materia} · ${fecha}`;
+
+  const rk=document.getElementById('res-rank');
+  if(pct>=90)      { rk.className='result-rank rank-s'; rk.textContent='★ EXCELENTE'; }
+  else if(pct>=70) { rk.className='result-rank rank-a'; rk.textContent='▲ MUY BIEN'; }
+  else if(pct>=50) { rk.className='result-rank rank-b'; rk.textContent='● SUFICIENTE'; }
+  else             { rk.className='result-rank rank-c'; rk.textContent='▼ A REPASAR'; }
+
+  if(infractions>0)
+    document.getElementById('res-infr').textContent=`⚠ Infracciones: ${infractions} · Cambios de pestaña: ${tabSwitches}`;
+
+  document.getElementById('result-panel').style.display='block';
+  document.getElementById('result-panel').scrollIntoView({behavior:'smooth'});
+}
+
+document.getElementById('ff').value=new Date().toISOString().split('T')[0];
+</script>
+</body>
+</html>
