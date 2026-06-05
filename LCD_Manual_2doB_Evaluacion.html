@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Evaluación — LCD Control Manual · 2do B · Arduino</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Outfit:wght@300;400;600;700;800&family=IBM+Plex+Mono:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="iedep-base.css">
+</head>
+<body>
+
+<!-- ── Marca de agua ── -->
+<div id="iedep-wm" data-txt="EVALUACIÓN SEGURA · LCD MANUAL · 2DO B · "></div>
+
+<!-- ── Insignia de infracciones ── -->
+<div id="infr-badge">⚠ INFRACCIONES: <span id="infr-n">0</span></div>
+
+<!-- ── Barra superior ── -->
+<div id="iedep-topbar">
+  <div class="topbar-left">
+    <div class="sec-pill"><div class="sec-dot ok"></div><span>COPIA BLOQUEADA</span></div>
+    <div class="sec-pill"><div class="sec-dot ok"></div><span>MENÚ BLOQUEADO</span></div>
+    <div class="sec-pill"><div class="sec-dot ok" id="dot-tab"></div><span id="tab-status">FOCO ACTIVO</span></div>
+  </div>
+  <div class="topbar-right">
+    <div id="tab-alert">⚠ CAMBIO DE PESTAÑA</div>
+    <div class="sec-pill"><span id="sec-clock">TIEMPO: --:--</span></div>
+    <button id="theme-toggle" onclick="toggleTheme()">
+      <span class="theme-icon" id="theme-icon">☀️</span>
+      <span id="theme-txt">CLARO</span>
+    </button>
+  </div>
+</div>
+
+<!-- ── Overlay de alerta ── -->
+<div id="iedep-alert">
+  <div class="alert-icon" id="alert-icon">🚨</div>
+  <div class="alert-title" id="alert-title">ACTIVIDAD DETECTADA</div>
+  <div class="alert-body"  id="alert-body">Esta acción ha sido registrada.</div>
+  <button class="alert-btn" onclick="closeAlert()">ENTENDIDO — CONTINUAR</button>
+</div>
+
+<!-- ── Temporizador ── -->
+<div id="iedep-timer">
+  <div>
+    <div style="font-family:var(--font-mono);font-size:8px;color:var(--text-muted);margin-bottom:2px">TIEMPO RESTANTE</div>
+    <div id="timer-display">25:00</div>
+  </div>
+  <div class="timer-meta">
+    <div>ALUMNO: <span id="t-name">—</span></div>
+    <div>GRUPO: <span id="t-group">—</span></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     CONTENIDO PRINCIPAL
+══════════════════════════════════════════════ -->
+<div class="iedep-wrap">
+
+  <header class="iedep-header" id="main-header">
+    <div class="iedep-badge">EVALUACIÓN · 2DO B · FUNDAMENTOS DE PROGRAMACIÓN</div>
+    <div class="iedep-title">🖥️ LCD SIN<br>LIBRERÍA</div>
+    <div class="iedep-subtitle">Arduino · PORTB · PORTC · PORTD · Modo 4-bit · Tinkercad</div>
+  </header>
+
+  <!-- ══ DATOS DEL ALUMNO ══ -->
+  <div class="datos-card" id="datos-section">
+    <span class="card-label">// DATOS DEL ALUMNO — 2DO B</span>
+    <div class="fields-grid">
+      <div class="iedep-field"><label>NOMBRE</label><input id="fn" type="text" placeholder="Tu nombre completo"></div>
+      <div class="iedep-field"><label>GRUPO</label><input id="fg" type="text" placeholder="2do B"></div>
+      <div class="iedep-field"><label>MATERIA</label><input id="fm" type="text" placeholder="Fundamentos de Programación"></div>
+      <div class="iedep-field"><label>FECHA</label><input id="ff" type="date"></div>
+    </div>
+    <button class="btn-primary" onclick="startQuiz()">INICIAR EVALUACIÓN &nbsp;▶</button>
+  </div>
+
+  <!-- ══ QUIZ ══ -->
+  <div id="quiz-body" style="display:none">
+
+    <!-- Barra de progreso -->
+    <div class="iedep-progress" id="prog-wrap">
+      <div class="prog-row">
+        <span style="color:var(--cyan)">PROGRESO</span>
+        <span class="prog-pct" id="prog-pct">0%</span>
+      </div>
+      <div class="prog-track"><div class="prog-fill" id="prog-fill"></div></div>
+      <div class="prog-sub">
+        <span id="ans-count">0 respondidas</span>
+        <span id="q-total"></span>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         SECCIÓN 1 — ¿Qué hace este proyecto?
+    ══════════════════════════════════════════ -->
+    <div class="eval-section">
+      <div class="ctx-box accent-green">
+        <div class="ctx-heading g"><span class="ctx-icon">🖥️</span>SECCIÓN 1 — ¿Qué hace este proyecto?</div>
+        <div class="ctx-body">
+          Este proyecto hace algo muy especial: controla una pantalla LCD de 16×2 caracteres <strong>sin usar ninguna librería</strong> — todo a mano, bit a bit.<br><br>
+          Normalmente usamos <code>LiquidCrystal.h</code> y la librería se encarga de todo. Aquí el alumno debe entender <strong>cómo funciona la pantalla por dentro</strong>: cómo enviarle comandos para limpiarla, encenderla, posicionar el cursor, y cómo enviarle los datos de cada carácter.<br><br>
+          El resultado visible es que la pantalla muestra la palabra <strong>"HII"</strong> en un bucle infinito — pero lo interesante no es lo que muestra, sino <em>cómo</em> lo logra: manipulando directamente los <strong>registros de puerto</strong> del Arduino (<code>PORTB</code>, <code>PORTC</code>, <code>PORTD</code>) en lugar de usar <code>digitalWrite()</code>. El circuito también incluye un potenciómetro para ajustar el contraste, un multímetro para medir voltajes, LEDs y un botón.
+        </div>
+        <pre class="iedep-code"><span class="cm">// Lo que hace el loop: mostrar "HII" para siempre</span>
+<span class="kw">while</span>(<span class="num">1</span>) {
+  command(CLEAR_1); command(CLEAR_2);  <span class="cm">// limpiar pantalla</span>
+  ch(H_1); ch(H_2);                   <span class="cm">// carácter 'H'</span>
+  ch(I_1); ch(I_2);                   <span class="cm">// carácter 'I'</span>
+  ch(I_1); ch(I_2);                   <span class="cm">// carácter 'I'</span>
+}</pre>
+      </div>
+      <div class="q-list" id="qs-s1"></div>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         SECCIÓN 2 — Registros de puerto: PORTB, PORTC, PORTD
+    ══════════════════════════════════════════ -->
+    <div class="eval-section">
+      <div class="ctx-box accent-cyan">
+        <div class="ctx-heading c"><span class="ctx-icon">⚡</span>SECCIÓN 2 — Registros de puerto: PORTB, PORTC, PORTD</div>
+        <div class="ctx-body">
+          Normalmente usamos <code>digitalWrite(pin, HIGH)</code> para controlar un pin. Pero hay una forma más directa y rápida: escribir en el <strong>registro de puerto</strong> completo de una sola vez.<br><br>
+          El Arduino UNO tiene tres grupos de pines físicos llamados puertos:<br>
+          • <strong>PORTD</strong> → pines digitales 0 al 7<br>
+          • <strong>PORTB</strong> → pines digitales 8 al 13<br>
+          • <strong>PORTC</strong> → pines analógicos A0 al A5<br><br>
+          Cuando el código escribe <code>PORTD = command</code>, está configurando los 8 pines del puerto D <strong>al mismo tiempo</strong>, en lugar de hacerlo uno por uno. El prefijo <code>DDR</code> (Data Direction Register) define si cada pin es entrada o salida: <code>DDRD = B11111111</code> pone todos los pines del puerto D como salidas de golpe.
+        </div>
+        <pre class="iedep-code"><span class="cm">// Configurar TODOS los pines de cada puerto como salidas</span>
+DDRD = B11111111; <span class="cm">// pines 0-7  → todos OUTPUT</span>
+DDRB = B11111111; <span class="cm">// pines 8-13 → todos OUTPUT</span>
+DDRC = B11111111; <span class="cm">// pines A0-A5 → todos OUTPUT</span>
+
+<span class="cm">// Escribir en el puerto D de una sola instrucción:</span>
+PORTD = <span class="num">0b0010</span>; <span class="cm">// pin 1 = HIGH, el resto = LOW</span>
+<span class="cm">// equivale a: digitalWrite(1, HIGH); y el resto LOW</span></pre>
+      </div>
+      <div class="q-list" id="qs-s2"></div>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         SECCIÓN 3 — Modo 4-bit y #define
+    ══════════════════════════════════════════ -->
+    <div class="eval-section">
+      <div class="ctx-box accent-amber">
+        <div class="ctx-heading a"><span class="ctx-icon">🔢</span>SECCIÓN 3 — Modo 4-bit, #define y binario</div>
+        <div class="ctx-body">
+          El LCD puede recibir datos de dos formas: en <strong>modo 8-bit</strong> (8 cables de datos) o en <strong>modo 4-bit</strong> (4 cables de datos). El modo 4-bit usa menos pines pero envía cada instrucción en <strong>dos partes</strong> (nibbles): primero los 4 bits altos, luego los 4 bits bajos. Por eso siempre vemos las funciones <code>command()</code> y <code>ch()</code> llamadas en pares.<br><br>
+          Los <strong>#define</strong> al inicio del código no son variables — son sustituciones de texto que hace el compilador antes de compilar. <code>#define CLEAR_1 0b0000</code> significa que cada vez que el código diga <code>CLEAR_1</code>, el compilador lo reemplaza con <code>0b0000</code> (cero en binario). Esto hace el código más legible sin usar memoria extra.<br><br>
+          El prefijo <code>0b</code> indica que el número está en <strong>base binaria</strong>: <code>0b0010</code> = 2 en decimal. Cada posición es una potencia de 2 de derecha a izquierda.
+        </div>
+        <pre class="iedep-code"><span class="cm">// #define: nombre → valor constante (el compilador hace la sustitución)</span>
+<span class="def">#define</span> DATAMODE <span class="num">0b0010</span> <span class="cm">// modo 4-bit = 2 decimal</span>
+<span class="def">#define</span> CLEAR_1  <span class="num">0b0000</span> <span class="cm">// primer nibble del comando CLEAR</span>
+<span class="def">#define</span> CLEAR_2  <span class="num">0b0001</span> <span class="cm">// segundo nibble del comando CLEAR</span>
+<span class="def">#define</span> H_1      <span class="num">0b0100</span> <span class="cm">// nibble alto de 'H' (ASCII 0x48)</span>
+<span class="def">#define</span> H_2      <span class="num">0b1000</span> <span class="cm">// nibble bajo de 'H'</span>
+
+<span class="cm">// Binario rápido:</span>
+<span class="cm">// 0b0001 = 1  |  0b0010 = 2  |  0b0100 = 4  |  0b1000 = 8</span></pre>
+      </div>
+      <div class="q-list" id="qs-s3"></div>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         SECCIÓN 4 — Las funciones command() y ch()
+    ══════════════════════════════════════════ -->
+    <div class="eval-section">
+      <div class="ctx-box accent-purple">
+        <div class="ctx-heading p"><span class="ctx-icon">📡</span>SECCIÓN 4 — Las funciones command() y ch()</div>
+        <div class="ctx-body">
+          El proyecto tiene dos funciones personalizadas que se encargan de comunicarse con el LCD:<br><br>
+          <strong>command(int c):</strong> Envía un comando al LCD (limpiar, encender, posicionar cursor). Pone <code>PORTC = B0</code> (RS = 0, modo comando), escribe el nibble en <code>PORTD</code>, y genera un pulso en <code>PORTB</code> (Enable: sube a B1, espera, baja a B0). El LCD lee el dato en el flanco de bajada del Enable.<br><br>
+          <strong>ch(int c):</strong> Envía un <em>carácter</em> al LCD para que lo muestre. La única diferencia con <code>command()</code> es que pone <code>PORTC = B1</code> (RS = 1, modo dato). El pin RS (Register Select) le dice al LCD: "esto es un dato a mostrar, no una instrucción".<br><br>
+          El <code>delay(DELAY)</code> dentro de ambas funciones (donde <code>DELAY = 2</code> ms) le da tiempo al LCD para procesar cada nibble antes de recibir el siguiente.
+        </div>
+        <pre class="iedep-code"><span class="kw">void</span> <span class="fn">command</span>(<span class="kw">int</span> c) {
+  PORTC = B0;   <span class="cm">// RS = 0 → modo COMANDO</span>
+  PORTD = c;    <span class="cm">// datos en el bus</span>
+  PORTB = B1;   <span class="cm">// Enable → HIGH (pulso)</span>
+  <span class="fn">delay</span>(DELAY); <span class="cm">// esperar 2 ms</span>
+  PORTB = B0;   <span class="cm">// Enable → LOW (LCD procesa)</span>
+}
+<span class="kw">void</span> <span class="fn">ch</span>(<span class="kw">int</span> c) {
+  PORTD = c;
+  PORTC = B1;   <span class="cm">// RS = 1 → modo DATO (carácter)</span>
+  PORTB = B1;
+  <span class="fn">delay</span>(DELAY);
+  PORTB = B0;
+}</pre>
+      </div>
+      <div class="q-list" id="qs-s4"></div>
+    </div>
+
+    <div class="text-center mt-24 mb-24">
+      <button class="btn-accent" onclick="evaluar()">VER MI RESULTADO &nbsp;🏆</button>
+    </div>
+
+  </div><!-- /quiz-body -->
+
+  <!-- ══ RESULTADO ══ -->
+  <div id="result-panel" style="display:none">
+    <div class="result-hero">
+      <div class="result-label">RESULTADO FINAL — LCD SIN LIBRERÍA · 2DO B</div>
+      <div class="result-score" id="res-score">0/16</div>
+      <div class="result-pct"  id="res-pct">0% DE ACIERTOS</div>
+      <div class="result-name" id="res-name"></div>
+      <div class="result-meta" id="res-meta"></div>
+      <div class="result-rank" id="res-rank"></div>
+      <div class="result-infr" id="res-infr"></div>
+    </div>
+    <div class="breakdown-card">
+      <h3>// DESGLOSE DE RESPUESTAS</h3>
+      <div id="bd-rows"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="window.print()">🖨 IMPRIMIR / PDF</button>
+    </div>
+  </div>
+
+</div><!-- /wrap -->
+
+<!-- ══════════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════════ -->
+<script>
+/* ══════════════════════════════════════════════
+   BANCO DE PREGUNTAS — 16 total, 4 por sección
+══════════════════════════════════════════════ */
+const SECCIONES = [
+
+  /* ─ S1: ¿Qué hace el proyecto? ─ */
+  { id:'s1', col:'g', preguntas:[
+    {
+      txt:'¿Cuál es la diferencia principal entre este proyecto y los anteriores que usaban <code>LiquidCrystal.h</code>?',
+      opts:[
+        'Este proyecto usa más pines del Arduino que los anteriores',
+        'Aquí el programador controla el LCD directamente bit a bit, sin que una librería haga el trabajo intermedio',
+        'LiquidCrystal.h no puede mostrar letras — este proyecto sí puede',
+        'Este proyecto es más lento porque no usa interrupciones'
+      ],
+      correct: 1,
+      fb: '✓ Exacto. Sin librería, el programador debe conocer el protocolo interno del LCD: cómo enviar comandos, cómo distinguir datos de instrucciones, y cómo generar los pulsos de Enable. La librería ocultaba todo eso.'
+    },
+    {
+      txt:'¿Qué texto aparece en la pantalla LCD cuando el programa está corriendo?',
+      opts:['HELLO','HI','HII','H I I (con espacios)'],
+      correct: 2,
+      fb: '✓ El loop envía: H (ch H_1+H_2), I (ch I_1+I_2), I (ch I_1+I_2) → "HII". Primero limpia la pantalla con CLEAR y luego escribe los tres caracteres en bucle infinito.'
+    },
+    {
+      txt:'¿Por qué el loop principal usa <code>while(1)</code> en lugar de poner el código directamente en <code>loop()</code>?',
+      opts:[
+        'Porque loop() no permite mostrar caracteres en el LCD',
+        'Porque while(1) es obligatorio cuando no se usa una librería',
+        'Ambas formas hacen lo mismo — while(1) dentro de loop() es solo una preferencia del programador para dejar claro que el ciclo es infinito',
+        'Porque loop() se ejecuta solo una vez y while(1) se repite'
+      ],
+      correct: 2,
+      fb: '✓ loop() ya se repite infinitamente por diseño de Arduino. Poner while(1) dentro tiene el mismo efecto — es una decisión de estilo para hacer explícita la naturaleza infinita del ciclo.'
+    },
+    {
+      txt:'¿Para qué sirve el potenciómetro conectado al LCD en este circuito?',
+      opts:[
+        'Para cambiar el brillo de los LEDs del circuito',
+        'Para ajustar el contraste de la pantalla LCD — sin él el texto podría no verse',
+        'Para controlar la velocidad del delay entre caracteres',
+        'Para seleccionar entre modo 4-bit y 8-bit'
+      ],
+      correct: 1,
+      fb: '✓ El pin V0 del LCD controla el contraste. El potenciómetro actúa como divisor de voltaje entre 5V y GND — al girarlo se ajusta el voltaje en V0 y con ello la visibilidad del texto en pantalla.'
+    },
+  ]},
+
+  /* ─ S2: Registros de puerto ─ */
+  { id:'s2', col:'c', preguntas:[
+    {
+      txt:'¿Qué ventaja tiene escribir <code>PORTD = B11001100</code> en lugar de usar 8 llamadas a <code>digitalWrite()</code>?',
+      opts:[
+        'Consume más memoria RAM pero es más legible',
+        'Configura los 8 pines del puerto D al mismo tiempo en una sola instrucción — es más rápido y eficiente',
+        'Solo funciona si todos los pines están en modo OUTPUT',
+        'No hay diferencia real — el compilador genera el mismo código'
+      ],
+      correct: 1,
+      fb: '✓ Escribir en un registro de puerto es una sola operación de hardware (~62 ns). Ocho llamadas a digitalWrite() tomarían varios microsegundos cada una. Además, todos los pines cambian simultáneamente, lo que es crucial en comunicación paralela.'
+    },
+    {
+      txt:'¿Qué hace exactamente <code>DDRC = B11111111</code> en setup()?',
+      opts:[
+        'Lee el estado de todos los pines analógicos',
+        'Configura todos los pines del puerto C (A0–A5) como salidas digitales',
+        'Establece el voltaje de referencia analógico en 5V',
+        'Activa el modo de comunicación I2C en los pines A4 y A5'
+      ],
+      correct: 1,
+      fb: '✓ DDR = Data Direction Register. Un bit en 1 = ese pin es OUTPUT. Un bit en 0 = ese pin es INPUT. B11111111 pone los 8 bits en 1 → todos los pines del puerto C como salidas.'
+    },
+    {
+      txt:'Si <code>PORTB = B1</code> en la función <code>command()</code>, ¿cuál pin del Arduino se pone en HIGH?',
+      opts:[
+        'El pin 13 (LED_BUILTIN)',
+        'El pin 8, que es el bit 0 del puerto B',
+        'Todos los pines del puerto B',
+        'El pin 0 del puerto digital'
+      ],
+      correct: 1,
+      fb: '✓ B1 = 0b00000001 — solo el bit 0 está en 1. El puerto B empieza en el pin digital 8, por lo que el bit 0 de PORTB corresponde al pin 8. Es el pin de Enable del LCD.'
+    },
+    {
+      txt:'¿Por qué en setup() se inicializan los tres puertos (DDRD, DDRB, DDRC) como salidas pero en loop() NO se lee ningún sensor?',
+      opts:[
+        'Porque el proyecto olvidó incluir sensores en el código',
+        'Porque este proyecto solo necesita enviar señales al LCD y los LEDs — no recibe información del exterior, solo transmite',
+        'Porque los sensores se leen automáticamente con interrupciones',
+        'Porque analogRead() no funciona cuando DDRC está en B11111111'
+      ],
+      correct: 1,
+      fb: '✓ El objetivo del proyecto es demostrar control directo del LCD. No hay sensores activos en el código — el Arduino solo escribe: manda comandos al LCD, activa LEDs. Todo fluye en una dirección: del Arduino hacia los componentes.'
+    },
+  ]},
+
+  /* ─ S3: #define, modo 4-bit, binario ─ */
+  { id:'s3', col:'a', preguntas:[
+    {
+      txt:'¿Qué diferencia hay entre usar <code>#define DELAY 2</code> y declarar <code>int DELAY = 2</code>?',
+      opts:[
+        'No hay diferencia — ambos hacen lo mismo en tiempo de ejecución',
+        '#define es una sustitución de texto en compilación que no ocupa memoria RAM; int crea una variable que sí ocupa espacio en memoria',
+        '#define solo funciona para números enteros; int funciona para cualquier tipo',
+        'int DELAY puede cambiar de valor en el programa; #define también puede cambiar si se usa ='
+      ],
+      correct: 1,
+      fb: '✓ #define es una directiva del preprocesador: antes de compilar, reemplaza cada aparición de DELAY por 2. No existe en tiempo de ejecución. int DELAY crea una variable en RAM que ocupa 2 bytes. Para constantes, #define es más eficiente en microcontroladores con poca memoria.'
+    },
+    {
+      txt:'En modo 4-bit, ¿por qué cada letra requiere DOS llamadas a la función <code>ch()</code>?',
+      opts:[
+        'Porque el LCD tiene dos filas y hay que escribir en cada una por separado',
+        'Porque cada carácter ASCII tiene 8 bits y en modo 4-bit solo se envían 4 bits a la vez — se necesitan dos envíos (nibbles) para completar el byte',
+        'Porque la primera llamada escribe el carácter y la segunda confirma que se recibió',
+        'Porque delay(2) no es suficiente tiempo y hay que repetir el envío'
+      ],
+      correct: 1,
+      fb: '✓ ASCII usa 8 bits por carácter. El modo 4-bit envía solo los 4 bits más significativos (high nibble) primero, y luego los 4 menos significativos (low nibble). Por eso H_1 + H_2 juntos forman el código completo de "H" (ASCII 0x48 = 0100 1000).'
+    },
+    {
+      txt:'¿Cuánto vale <code>0b0100</code> en decimal?',
+      opts:['2','4','8','16'],
+      correct: 1,
+      fb: '✓ Binario 0100: el 1 está en la posición del bit 2 (valor 4). Cálculo: 0×8 + 1×4 + 0×2 + 0×1 = 4. Recuerda: cada posición hacia la izquierda duplica el valor (1, 2, 4, 8, 16...).'
+    },
+    {
+      txt:'¿Qué pasaría si cambiáramos <code>#define DELAY 2</code> por <code>#define DELAY 0</code>?',
+      opts:[
+        'El programa sería más rápido y funcionaría igual de bien',
+        'El LCD probablemente no mostraría nada o mostraría caracteres incorrectos porque no tendría tiempo de procesar cada nibble',
+        'El programa entraría en un bucle infinito',
+        'DELAY no afecta al LCD — solo afecta a los LEDs del circuito'
+      ],
+      correct: 1,
+      fb: '✓ El LCD necesita tiempo mínimo para procesar cada comando según su datasheet (típico: 37 µs para comandos, 1.52 ms para CLEAR). Con delay(0), los pulsos serían demasiado rápidos y el LCD no podría leerlos correctamente, mostrando basura o nada.'
+    },
+  ]},
+
+  /* ─ S4: Funciones command() y ch() + desafíos ─ */
+  { id:'s4', col:'p', preguntas:[
+    {
+      txt:'¿Cuál es la única diferencia entre las funciones <code>command()</code> y <code>ch()</code>?',
+      opts:[
+        'command() usa delay y ch() no',
+        'El valor del pin RS: command() pone PORTC = B0 (RS=0, instrucción) y ch() pone PORTC = B1 (RS=1, dato)',
+        'command() escribe en PORTD y ch() escribe en PORTB',
+        'ch() puede enviar 8 bits a la vez; command() solo 4'
+      ],
+      correct: 1,
+      fb: '✓ RS (Register Select) es el pin que le dice al LCD "esto es una instrucción" o "esto es un carácter a mostrar". RS=0 → el LCD interpreta el dato como un comando de control. RS=1 → el LCD lo muestra en pantalla. Todo lo demás es idéntico.'
+    },
+    {
+      txt:'En la función <code>command()</code>, ¿por qué primero se pone <code>PORTB = B1</code> y luego <code>PORTB = B0</code>?',
+      opts:[
+        'Para evitar que el LCD se apague entre comandos',
+        'Porque el LCD lee los datos en el flanco de bajada del pin Enable — sube a HIGH para avisar que hay datos, luego baja a LOW para que el LCD los procese',
+        'Para ahorrar energía entre instrucciones',
+        'Porque PORTB = B0 reinicia el puerto antes del siguiente comando'
+      ],
+      correct: 1,
+      fb: '✓ El LCD HD44780 captura los datos en el flanco descendente del pin E (Enable). La secuencia es: poner datos en bus → E=HIGH (LCD se prepara) → E=LOW (LCD captura y procesa). Sin este pulso, el LCD ignora los datos.'
+    },
+    {
+      txt:'Si quisieras mostrar la letra "A" (cuyo código ASCII en hex es 0x41 = 0100 0001 en binario), ¿qué valores necesitarías para A_1 y A_2?',
+      opts:[
+        'A_1 = 0b0100, A_2 = 0b0001',
+        'A_1 = 0b0001, A_2 = 0b0100',
+        'A_1 = 0b1000, A_2 = 0b0010',
+        'A_1 = 0b0000, A_2 = 0b1010'
+      ],
+      correct: 0,
+      fb: '✓ ASCII "A" = 0x41 = 0100 0001. El high nibble (4 bits altos) es 0100 → A_1 = 0b0100. El low nibble (4 bits bajos) es 0001 → A_2 = 0b0001. En modo 4-bit siempre va primero el nibble alto.'
+    },
+    {
+      txt:'¿Por qué al inicio de loop() se llama a <code>command(CLEAR_1)</code> y <code>command(CLEAR_2)</code> en lugar de simplemente reiniciar el texto encima del anterior?',
+      opts:[
+        'Porque si no se borra, el LCD acumula caracteres y se desborda la memoria',
+        'Porque el LCD no actualiza automáticamente — si no se borra, el texto nuevo se sobrepone al viejo y se ven caracteres mezclados o residuales',
+        'Porque CLEAR también reinicia el contador de posición del cursor al inicio',
+        'Ambas B y C son correctas'
+      ],
+      correct: 3,
+      fb: '✓ El comando CLEAR hace dos cosas: borra todos los caracteres de la pantalla Y regresa el cursor a la posición 0,0. Sin él, los nuevos caracteres se escribirían encima de los anteriores y el cursor avanzaría indefinidamente fuera de pantalla.'
+    },
+  ]},
+];
+
+/* ══════════════════════════════════════════════
+   SEGURIDAD (idéntica al estándar IEDEP)
+══════════════════════════════════════════════ */
+let infractions=0, tabSwitches=0, quizActive=false, alertOpen=false;
+
+function infract(){ infractions++; document.getElementById('infr-n').textContent=infractions; document.getElementById('infr-badge').classList.add('show'); }
+function showAlert(icon,title,body){ if(alertOpen)return; alertOpen=true; document.getElementById('alert-icon').textContent=icon; document.getElementById('alert-title').textContent=title; document.getElementById('alert-body').textContent=body; document.getElementById('iedep-alert').classList.add('show'); }
+function closeAlert(){ document.getElementById('iedep-alert').classList.remove('show'); alertOpen=false; }
+
+document.addEventListener('copy',e=>{ e.preventDefault(); infract(); showAlert('⛔','COPIA BLOQUEADA','El texto no se puede copiar. Acción registrada.'); });
+document.addEventListener('cut', e=>{ e.preventDefault(); infract(); });
+document.addEventListener('contextmenu',e=>{ if(!e.target.closest('input')){ e.preventDefault(); infract(); showAlert('🖱️','MENÚ BLOQUEADO','El menú contextual está desactivado durante la evaluación.'); }});
+document.addEventListener('dragstart',e=>{ if(!e.target.closest('input')) e.preventDefault(); });
+document.addEventListener('keydown',e=>{
+  const inResult=document.getElementById('result-panel').style.display!=='none';
+  const blocked=[e.ctrlKey&&e.key==='a',e.ctrlKey&&e.key==='c',e.ctrlKey&&e.key==='u',e.ctrlKey&&e.key==='s',e.ctrlKey&&e.shiftKey&&(e.key==='I'||e.key==='J'||e.key==='C'),e.key==='F12'];
+  if(e.ctrlKey&&e.key==='p'&&inResult)return;
+  if(blocked.some(Boolean)){ e.preventDefault(); if(quizActive){ infract(); showAlert('⌨️','ATAJO BLOQUEADO','Este atajo no está permitido.'); }}
+});
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden&&quizActive){ tabSwitches++; infract(); const ta=document.getElementById('tab-alert'),dt=document.getElementById('dot-tab'); ta.classList.add('show'); dt.className='sec-dot err'; document.getElementById('tab-status').textContent='CAMBIO DETECTADO'; setTimeout(()=>{ ta.classList.remove('show'); dt.className='sec-dot ok'; document.getElementById('tab-status').textContent='FOCO ACTIVO'; },4000); }
+});
+window.addEventListener('blur',()=>{ if(quizActive){ infract(); document.getElementById('tab-alert').classList.add('show'); setTimeout(()=>document.getElementById('tab-alert').classList.remove('show'),3000); }});
+setInterval(()=>{ if(window.outerWidth-window.innerWidth>160||window.outerHeight-window.innerHeight>160){ if(quizActive){ infract(); showAlert('🛠️','DEVTOOLS DETECTADOS','Herramientas de desarrollador abiertas. Acción registrada.'); }}},3000);
+
+/* ══════════════════════════════════════════════
+   TEMPORIZADOR 25 min
+══════════════════════════════════════════════ */
+let secondsLeft=25*60, timerInterval=null;
+function startTimer(){
+  const d=document.getElementById('timer-display'), c=document.getElementById('sec-clock');
+  timerInterval=setInterval(()=>{
+    secondsLeft--;
+    const m=Math.floor(secondsLeft/60),s=secondsLeft%60;
+    const txt=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    d.textContent=txt; c.textContent=`TIEMPO: ${txt}`;
+    if(secondsLeft<=300&&secondsLeft>60)d.className='warn';
+    if(secondsLeft<=60)d.className='critical';
+    if(secondsLeft<=0){ clearInterval(timerInterval); evaluar(true); }
+  },1000);
+}
+
+/* ══════════════════════════════════════════════
+   TEMA
+══════════════════════════════════════════════ */
+function toggleTheme(){
+  const html=document.documentElement, isDark=html.getAttribute('data-theme')==='dark';
+  html.setAttribute('data-theme',isDark?'light':'dark');
+  document.getElementById('theme-icon').textContent=isDark?'🌙':'☀️';
+  document.getElementById('theme-txt').textContent=isDark?'OSCURO':'CLARO';
+  localStorage.setItem('iedep-theme',isDark?'light':'dark');
+}
+(function(){ const s=localStorage.getItem('iedep-theme'); if(s){ document.documentElement.setAttribute('data-theme',s); document.getElementById('theme-icon').textContent=s==='light'?'🌙':'☀️'; document.getElementById('theme-txt').textContent=s==='light'?'OSCURO':'CLARO'; }})();
+
+/* ══════════════════════════════════════════════
+   RENDERIZAR PREGUNTAS
+══════════════════════════════════════════════ */
+let totalQs=0, pregData=[];
+function renderAll(){
+  SECCIONES.forEach(sec=>{
+    const cont=document.getElementById(`qs-${sec.id}`);
+    sec.preguntas.forEach((q)=>{
+      const gi=totalQs;
+      pregData.push({correct:q.correct,fb:q.fb,txt:q.txt,col:sec.col});
+      totalQs++;
+      const keys=['A','B','C','D'];
+      const optsHtml=q.opts.map((o,oi)=>`
+        <label class="opt-label" onclick="updateProg()">
+          <input class="opt-radio" type="radio" name="q${gi}" value="${oi}">
+          <span class="opt-key">${keys[oi]}.</span>
+          <span class="opt-text">${o}</span>
+        </label>`).join('');
+      const div=document.createElement('div');
+      div.className='q-item'; div.id=`qi-${gi}`;
+      div.innerHTML=`
+        <div class="q-meta-row">
+          <div class="q-num ${sec.col}">${gi+1}</div>
+          <div class="q-text">${q.txt}</div>
+        </div>
+        <div class="opts-list">${optsHtml}</div>
+        <div class="q-feedback" id="fb-${gi}"></div>`;
+      cont.appendChild(div);
+    });
+  });
+  document.getElementById('q-total').textContent=`de ${totalQs}`;
+}
+renderAll();
+
+function updateProg(){
+  const answered=pregData.filter((_,i)=>document.querySelector(`input[name="q${i}"]:checked`)).length;
+  const pct=Math.round(answered/totalQs*100);
+  document.getElementById('prog-fill').style.width=pct+'%';
+  document.getElementById('prog-pct').textContent=pct+'%';
+  document.getElementById('ans-count').textContent=`${answered} respondidas`;
+}
+
+/* ══════════════════════════════════════════════
+   INICIAR QUIZ
+══════════════════════════════════════════════ */
+function startQuiz(){
+  const nombre=document.getElementById('fn').value.trim();
+  const grupo=document.getElementById('fg').value.trim();
+  if(!nombre||!grupo){ alert('Por favor ingresa tu nombre y grupo.'); return; }
+  const wm=document.getElementById('iedep-wm');
+  wm.setAttribute('data-txt',`${nombre.toUpperCase()} · LCD SIN LIBRERÍA · 2DO B · `.repeat(3));
+  document.getElementById('main-header').setAttribute('data-alumno',`${nombre} · ${grupo}`);
+  document.getElementById('t-name').textContent=nombre;
+  document.getElementById('t-group').textContent=grupo;
+  document.getElementById('datos-section').style.display='none';
+  document.getElementById('quiz-body').style.display='block';
+  document.getElementById('iedep-timer').classList.add('show');
+  document.getElementById('prog-wrap').classList.add('show');
+  quizActive=true; startTimer();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+/* ══════════════════════════════════════════════
+   EVALUAR
+══════════════════════════════════════════════ */
+function evaluar(timeout=false){
+  clearInterval(timerInterval); quizActive=false;
+  let correctas=0;
+  const bdRows=document.getElementById('bd-rows');
+  bdRows.innerHTML='';
+
+  pregData.forEach((p,gi)=>{
+    const sel=document.querySelector(`input[name="q${gi}"]:checked`);
+    const ans=sel?parseInt(sel.value):-1;
+    const isOk=ans===p.correct;
+    if(isOk)correctas++;
+
+    const fb=document.getElementById(`fb-${gi}`);
+    if(fb){ fb.className=`q-feedback ${isOk?'ok':'err'}`; fb.textContent=isOk?p.fb:`✗ Incorrecto. ${p.fb}`; }
+
+    document.querySelectorAll(`input[name="q${gi}"]`).forEach((r,ri)=>{
+      r.disabled=true;
+      const lbl=r.closest('.opt-label'); lbl.classList.add('locked');
+      if(ri===p.correct) lbl.classList.add('result-correct');
+      else if(ri===ans)  lbl.classList.add('result-wrong');
+    });
+
+    const row=document.createElement('div');
+    row.className='bd-row';
+    const qt=p.txt.replace(/<[^>]+>/g,'').substring(0,58)+'…';
+    row.innerHTML=`<span class="bd-q">P${gi+1}: ${qt}</span><span class="bd-pts ${isOk?'ok':'err'}">${isOk?'✓ CORRECTO':'✗ INCORRECTO'}</span>`;
+    bdRows.appendChild(row);
+  });
+
+  const pct=Math.round(correctas/totalQs*100);
+  document.getElementById('res-score').textContent=`${correctas}/${totalQs}`;
+  document.getElementById('res-pct').textContent=`${pct}% DE ACIERTOS${timeout?' — TIEMPO AGOTADO':''}`;
+
+  const nombre=document.getElementById('fn').value;
+  const grupo=document.getElementById('fg').value;
+  const materia=document.getElementById('fm').value||'Fundamentos de Programación';
+  const fecha=document.getElementById('ff').value;
+  document.getElementById('res-name').textContent=nombre;
+  document.getElementById('res-meta').textContent=`${grupo} · ${materia} · ${fecha}`;
+
+  const rk=document.getElementById('res-rank');
+  if(pct>=90)      { rk.className='result-rank rank-s'; rk.textContent='★ EXCELENTE'; }
+  else if(pct>=70) { rk.className='result-rank rank-a'; rk.textContent='▲ MUY BIEN'; }
+  else if(pct>=50) { rk.className='result-rank rank-b'; rk.textContent='● SUFICIENTE'; }
+  else             { rk.className='result-rank rank-c'; rk.textContent='▼ A REPASAR'; }
+
+  if(infractions>0)
+    document.getElementById('res-infr').textContent=`⚠ Infracciones: ${infractions} · Cambios de pestaña: ${tabSwitches}`;
+
+  document.getElementById('result-panel').style.display='block';
+  document.getElementById('result-panel').scrollIntoView({behavior:'smooth'});
+}
+
+document.getElementById('ff').value=new Date().toISOString().split('T')[0];
+</script>
+</body>
+</html>
